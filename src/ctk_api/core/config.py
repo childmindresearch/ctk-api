@@ -73,12 +73,11 @@ class Settings(pydantic_settings.BaseSettings):  # type: ignore[valid-type, misc
         Raises:
             ValueError: If the environment is not valid.
         """
-        if value in {"testing", "development", "staging", "production"}:
+        valid_environments = {"ci-testing", "testing", "development", "production"}
+        if value in valid_environments:
             return value
-        msg = (
-            "Environment must be 'testing', 'development', 'staging', or 'production'."
-        )
-        raise OSError(msg)
+        msg = f"Environment must be one of {', '.join(valid_environments)}."
+        raise ValueError(msg)
 
 
 @functools.lru_cache
