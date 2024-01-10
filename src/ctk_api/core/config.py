@@ -39,25 +39,22 @@ class Settings(pydantic_settings.BaseSettings):  # type: ignore[valid-type, misc
         json_schema_extra={"env": "OPENAI_CHAT_COMPLETION_PROMPT_FILE"},
     )
 
-    ELASTIC_URL: pydantic.AnyHttpUrl = pydantic.Field(
-        "http://localhost:9200",
-        json_schema_extra={"env": "ELASTIC_URL"},
+    POSTGRES_URL: str = pydantic.Field(
+        "localhost:5432",
+        json_schema_extra={"env": "POSTGRES_HOST"},
     )
-    ELASTIC_USER: str = pydantic.Field(
-        "elastic",
-        json_schema_extra={"env": "ELASTIC_USER"},
+    POSTGRES_USER: pydantic.SecretStr = pydantic.Field(
+        "postgres",
+        json_schema_extra={"env": "POSTGRES_USER"},
     )
-    ELASTIC_PASSWORD: pydantic.SecretStr = pydantic.Field(
-        ...,
-        json_schema_extra={"env": "ELASTIC_PASSWORD"},
+    POSTGRES_PASSWORD: pydantic.SecretStr = pydantic.Field(
+        "postgres",
+        json_schema_extra={"env": "POSTGRES_PASSWORD"},
     )
-    ELASTIC_DIAGNOSES_INDEX: str = pydantic.Field(
-        "diagnoses",
-        json_schema_extra={"env": "ELASTIC_DIAGNOSES_INDEX"},
-    )
-    ELASTIC_SUMMARIZATION_INDEX: str = pydantic.Field(
-        "summarization",
-        json_schema_extra={"env": "ELASTIC_SUMMARIZATION_INDEX"},
+
+    SQLITE_FILE: str = pydantic.Field(
+        "ctk_api.sqlite",
+        json_schema_extra={"env": "SQLITE_FILE"},
     )
 
     @pydantic.field_validator("ENVIRONMENT")
@@ -76,9 +73,10 @@ class Settings(pydantic_settings.BaseSettings):  # type: ignore[valid-type, misc
         Raises:
             ValueError: If the environment is not valid.
         """
-        if value in {"development", "staging", "production"}:
+        valid_environments = {"ci-testing", "testing", "development", "production"}
+        if value in valid_environments:
             return value
-        msg = "Environment must be either 'development', 'staging', or 'production'."
+        msg = f"Environment must be one of {', '.join(valid_environments)}."
         raise ValueError(msg)
 
 

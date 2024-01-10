@@ -16,9 +16,8 @@ class Endpoints(str, enum.Enum):
     ANONYMIZE_REPORT = f"{API_ROOT}/summarization/anonymize_report"
     SUMMARIZE_REPORT = f"{API_ROOT}/summarization/summarize_report"
     GET_DIAGNOSES = f"{API_ROOT}/diagnoses"
-    POST_DIAGNOSIS_ROOT = f"{API_ROOT}/diagnoses"  # noqa: PIE796
-    POST_DIAGNOSIS_NODE = f"{API_ROOT}/diagnoses/{{diagnosis_id}}"
-    PATCH_DIAGNOSIS = f"{API_ROOT}/diagnoses/{{diagnosis_id}}"  # noqa: PIE796
+    POST_DIAGNOSIS = f"{API_ROOT}/diagnoses"  # noqa: PIE796
+    PATCH_DIAGNOSIS = f"{API_ROOT}/diagnoses/{{diagnosis_id}}"
     DELETE_DIAGNOSIS = f"{API_ROOT}/diagnoses/{{diagnosis_id}}"  # noqa: PIE796
 
 

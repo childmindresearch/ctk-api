@@ -81,11 +81,6 @@ def test_summarization_endpoint_new(
     endpoints: conftest.Endpoints,
 ) -> None:
     """Tests the summarization endpoint."""
-    mocker.patch(
-        "ctk_api.routers.summarization.controller._check_for_existing_document",
-        return_value=None,
-    )
-
     response = client.post(endpoints.SUMMARIZE_REPORT, json={"text": "Hello there."})
 
     assert response.status_code == status.HTTP_201_CREATED
@@ -105,11 +100,7 @@ def test_summarization_endpoint_exists(
     endpoints: conftest.Endpoints,
 ) -> None:
     """Tests the summarization endpoint when the document already exists."""
-    document = {"summary": "Hello there."}
-    mocker.patch(
-        "ctk_api.routers.summarization.controller._check_for_existing_document",
-        return_value=document,
-    )
+    client.post(endpoints.SUMMARIZE_REPORT, json={"text": "Hello there."})
 
     response = client.post(endpoints.SUMMARIZE_REPORT, json={"text": "Hello there."})
 
