@@ -56,7 +56,6 @@ def _mock_openai_response(mocker: plugin.MockerFixture) -> None:
     openai.chat.completions.create = mocker.MagicMock(return_value=response)
 
 
-@pytest.mark.skip(reason="CI Debugging")
 def test_anonymization_endpoint(
     client: testclient.TestClient,
     endpoints: conftest.Endpoints,
