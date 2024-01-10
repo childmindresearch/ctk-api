@@ -61,7 +61,7 @@ def create_diagnosis_node(
     )
 
     if parent_id is not None:
-        parent = session.query(models.DiagnosisNode).get(parent_id)
+        parent = session.get(models.DiagnosisNode, parent_id)
         if parent is None:
             raise fastapi.HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -90,7 +90,7 @@ def patch_diagnosis_node(
         The patched diagnosis.
     """
     logger.debug("Patching diagnosis %s.", identifier)
-    diagnosis = session.query(models.DiagnosisNode).get(identifier)
+    diagnosis = session.get(models.DiagnosisNode, identifier)
     if diagnosis is None:
         raise fastapi.HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
