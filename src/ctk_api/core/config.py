@@ -60,6 +60,24 @@ class Settings(pydantic_settings.BaseSettings):  # type: ignore[valid-type, misc
         json_schema_extra={"env": "ELASTIC_SUMMARIZATION_INDEX"},
     )
 
+    POSTGRES_URL: str = pydantic.Field(
+        "localhost:5432",
+        json_schema_extra={"env": "POSTGRES_HOST"},
+    )
+    POSTGRES_USER: pydantic.SecretStr = pydantic.Field(
+        "postgres",
+        json_schema_extra={"env": "POSTGRES_USER"},
+    )
+    POSTGRES_PASSWORD: pydantic.SecretStr = pydantic.Field(
+        "postgres",
+        json_schema_extra={"env": "POSTGRES_PASSWORD"},
+    )
+
+    SQLITE_FILE: str = pydantic.Field(
+        "ctk_api.sqlite",
+        json_schema_extra={"env": "SQLITE_FILE"},
+    )
+
     @pydantic.field_validator("ENVIRONMENT")
     def validate_environment(
         cls,  # noqa: N805
@@ -76,10 +94,12 @@ class Settings(pydantic_settings.BaseSettings):  # type: ignore[valid-type, misc
         Raises:
             ValueError: If the environment is not valid.
         """
-        if value in {"development", "staging", "production"}:
+        if value in {"testing", "development", "staging", "production"}:
             return value
-        msg = "Environment must be either 'development', 'staging', or 'production'."
-        raise ValueError(msg)
+        msg = (
+            "Environment must be 'testing', 'development', 'staging', or 'production'."
+        )
+        raise OSError(msg)
 
 
 @functools.lru_cache

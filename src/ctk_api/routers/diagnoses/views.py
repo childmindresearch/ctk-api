@@ -1,13 +1,13 @@
 """View definitions for the diagnoses router."""
 import logging
-from typing import Any
 
 import fastapi
 from fastapi import status
+from sqlalchemy import orm
 
 from ctk_api.core import config
-from ctk_api.microservices import elastic
-from ctk_api.routers.diagnoses import controller, schemas
+from ctk_api.microservices import sql
+from ctk_api.routers.diagnoses import controller, models, schemas
 
 settings = config.get_settings()
 LOGGER_NAME = settings.LOGGER_NAME
@@ -21,48 +21,24 @@ router = fastapi.APIRouter(prefix="/diagnoses", tags=["diagnoses"])
     "",
     description="Gets the dictionary of diagnoses.",
     status_code=status.HTTP_200_OK,
+    response_model=list[schemas.DiagnosisNodeOutput],
 )
 async def get_diagnoses(
-    elastic_client: elastic.ElasticClient = fastapi.Depends(elastic.ElasticClient),
-) -> list[schemas.DiagnosisNode]:
+    session: orm.Session = fastapi.Depends(sql.get_session),
+) -> list[models.DiagnosisNode]:
     """Gets the dictionary of diagnoses.
 
     Returns:
         The dictionary of diagnoses.
     """
     logger.debug("Getting diagnoses.")
-    diagnoses = await controller.get_diagnoses(elastic_client)
+    diagnoses = controller.get_diagnoses(session)
     logger.debug("Got diagnoses.")
     return diagnoses
 
 
 @router.post(
     "",
-    summary="Creates a new diagnosis root node.",
-    description="Creates a new diagnosis root node.",
-    status_code=status.HTTP_201_CREATED,
-)
-async def create_diagnosis_root(
-    diagnosis: schemas.DiagnosisNode,
-    elastic_client: elastic.ElasticClient = fastapi.Depends(elastic.ElasticClient),
-) -> dict[str, Any]:
-    """Creates a new diagnosis root node.
-
-    Args:
-        diagnosis: The diagnosis to create.
-        elastic_client: The Elasticsearch client.
-
-    Returns:
-        The created diagnosis.
-    """
-    logger.debug("Creating diagnosis root.")
-    response = await controller.create_diagnosis_root(diagnosis, elastic_client)
-    logger.debug("Created diagnosis root.")
-    return response
-
-
-@router.post(
-    "/{diagnosis_id}",
     summary="Creates a new node in the diagnosis tree.",
     description="""Creates a new diagnosis node. Provide the identifier of the parent
     diagnosis node to create a child node, or no identifier for a root node.""",
@@ -74,29 +50,30 @@ async def create_diagnosis_root(
     },
 )
 async def create_diagnosis_node(
-    diagnosis: schemas.DiagnosisNode,
-    diagnosis_id: str = fastapi.Path(
+    diagnosis: schemas.DiagnosisNodeCreate,
+    parent_id: int | None = fastapi.Body(
+        None,
         description="""The identifier of the parent diagnosis node.
             Leave blank to create a root node.""",
     ),
-    elastic_client: elastic.ElasticClient = fastapi.Depends(elastic.ElasticClient),
-) -> dict[str, Any]:
+    session: orm.Session = fastapi.Depends(sql.get_session),
+) -> schemas.DiagnosisNodeOutput:
     """Creates a new diagnosis.
 
     Args:
         diagnosis: The diagnosis to create.
-        diagnosis_id: The identifier of the parent diagnosis node. If
+        parent_id: The identifier of the parent diagnosis node. If
             None, the diagnosis is created as a root node.
-        elastic_client: The Elasticsearch client.
+        session: The database session.
 
     Returns:
         The created diagnosis.
     """
     logger.debug("Creating diagnosis.")
-    response = await controller.create_diagnosis_node(
+    response = controller.create_diagnosis_node(
         diagnosis,
-        elastic_client,
-        diagnosis_id,
+        parent_id,
+        session,
     )
     logger.debug("Created diagnosis.")
     return response
@@ -114,29 +91,32 @@ async def create_diagnosis_node(
     },
 )
 async def patch_diagnosis_node(
-    update_schema: schemas.UpdateDiagnosisNode,
-    diagnosis_id: str = fastapi.Path(
+    text: schemas.DiagnosisNodePatch = fastapi.Body(
+        ...,
+        description="The new text to add to the node.",
+    ),
+    diagnosis_id: int = fastapi.Path(
         description="The identifier of the diagnosis to update.",
     ),
-    elastic_client: elastic.ElasticClient = fastapi.Depends(elastic.ElasticClient),
-) -> dict[str, Any]:
+    session: orm.Session = fastapi.Depends(sql.get_session),
+) -> schemas.DiagnosisNodeOutput:
     """Updates a diagnosis.
 
     Args:
-        update_schema: The new text of the diagnosis.
+        text: The new text of the diagnosis.
         diagnosis_id: The ID of the diagnosis to update.
-        elastic_client: The Elasticsearch client.
+        session: The database session.
 
     Returns:
         The updated diagnosis.
     """
-    logger.debug("Updating diagnosis.")
-    response = await controller.patch_diagnosis_node(
+    logger.debug("Updating diagnosis %s.", diagnosis_id)
+    response = controller.patch_diagnosis_node(
         diagnosis_id,
-        update_schema,
-        elastic_client,
+        text,
+        session,
     )
-    logger.debug("Updated diagnosis.")
+    logger.debug("Updated diagnosis %s.", diagnosis_id)
     return response
 
 
@@ -152,15 +132,15 @@ async def patch_diagnosis_node(
     },
 )
 async def delete_diagnosis_node(
-    diagnosis_id: str,
-    elastic_client: elastic.ElasticClient = fastapi.Depends(elastic.ElasticClient),
+    diagnosis_id: int,
+    session: orm.Session = fastapi.Depends(sql.get_session),
 ) -> None:
     """Deletes a diagnosis.
 
     Args:
         diagnosis_id: The ID of the diagnosis to delete.
-        elastic_client: The Elasticsearch client.
+        session: The database session.
     """
     logger.debug("Deleting diagnosis.")
-    await controller.delete_diagnosis_node(diagnosis_id, elastic_client)
+    controller.delete_diagnosis_node(diagnosis_id, session)
     logger.debug("Deleted diagnosis.")

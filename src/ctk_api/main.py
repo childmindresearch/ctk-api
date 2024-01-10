@@ -1,10 +1,13 @@
 """Main entrypoint for the API."""
+import contextlib
 import logging
+from collections.abc import AsyncGenerator
 
 import fastapi
 from fastapi.middleware import cors
 
 from ctk_api.core import config, middleware
+from ctk_api.microservices import sql
 from ctk_api.routers.diagnoses import views as diagnoses_views
 from ctk_api.routers.summarization import views as summarization_views
 
@@ -13,6 +16,17 @@ LOGGER_NAME = settings.LOGGER_NAME
 
 config.initialize_logger()
 logger = logging.getLogger(LOGGER_NAME)
+
+
+@contextlib.asynccontextmanager
+async def lifespan(app: fastapi.FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
+    """Runs the lifespan events for the API."""
+    logger.info("Running startup events.")
+    logger.debug("Initializing SQL microservice.")
+    database = sql.Database()
+    database.create_database()
+    yield
+
 
 logger.info("Initializing API routes.")
 api_router = fastapi.APIRouter(prefix="/api/v1")
@@ -30,6 +44,7 @@ app = fastapi.FastAPI(
         "email": "dair@childmind.org",
     },
     swagger_ui_parameters={"operationsSorter": "method"},
+    lifespan=lifespan,
 )
 app.include_router(api_router)
 

@@ -4,13 +4,30 @@ from collections.abc import Generator
 
 import docx
 import pytest
+from sqlalchemy import orm
 
 from ctk_api.core import config
-from ctk_api.microservices import elastic
+from ctk_api.microservices import elastic, sql
 
 settings = config.get_settings()
 ELASTIC_DIAGNOSES_INDEX = settings.ELASTIC_DIAGNOSES_INDEX
 ELASTIC_SUMMARIZATION_INDEX = settings.ELASTIC_SUMMARIZATION_INDEX
+
+
+@pytest.fixture(autouse=True)
+def _reset_testing_db() -> Generator[None, None, None]:
+    """Resets the testing database."""
+    database = sql.Database()
+    sql.Base.metadata.drop_all(database.engine)
+    database.create_database()
+    yield
+    sql.Base.metadata.drop_all(database.engine)
+
+
+@pytest.fixture()
+def session() -> orm.Session:
+    """Gets a database session."""
+    return next(sql.get_session())
 
 
 @pytest.fixture()
