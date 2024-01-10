@@ -127,7 +127,6 @@ async def test_delete_diagnosis_node(
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
 
-@pytest.mark.skip(reason="CI Debugging")
 @pytest.mark.asyncio()
 async def test_delete_diagnosis_node_cascade_to_children(
     endpoints: conftest.Endpoints,
@@ -136,7 +135,7 @@ async def test_delete_diagnosis_node_cascade_to_children(
 ) -> None:
     """Tests deleting a diagnosis node cascades to children."""
     diagnosis = {
-        "text": "test_text",
+        "text": "test_text_cascade_children",
         "children": [
             {
                 "text": "test_child_1",
@@ -160,7 +159,6 @@ async def test_delete_diagnosis_node_cascade_to_children(
     assert child is None
 
 
-@pytest.mark.skip(reason="CI Debugging")
 @pytest.mark.asyncio()
 async def test_delete_diagnosis_node_child_no_parent_cascade(
     endpoints: conftest.Endpoints,
@@ -169,7 +167,7 @@ async def test_delete_diagnosis_node_child_no_parent_cascade(
 ) -> None:
     """Tests deleting a diagnosis node child does not delete the parent."""
     diagnosis = {
-        "text": "test_text",
+        "text": "test_text_cascade_parent",
         "children": [
             {
                 "text": "test_child_1",

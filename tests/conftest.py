@@ -9,14 +9,12 @@ from sqlalchemy import orm
 from ctk_api.microservices import sql
 
 
-@pytest.fixture(autouse=True)
-def _reset_testing_db() -> Generator[None, None, None]:
+@pytest.fixture(autouse=True, scope="session")
+def _reset_testing_db() -> None:
     """Resets the testing database."""
     database = sql.Database()
     sql.Base.metadata.drop_all(database.engine)
     database.create_database()
-    yield
-    sql.Base.metadata.drop_all(database.engine)
 
 
 @pytest.fixture()

@@ -112,11 +112,13 @@ def delete_diagnosis_node(identifier: int, session: orm.Session) -> None:
         fastapi.HTTPException: 404 If the diagnosis does not exist.
     """
     logger.debug("Deleting diagnosis %s.", identifier)
+
     diagnosis = session.get(models.DiagnosisNode, identifier)
     if diagnosis is None:
         raise fastapi.HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="The specified diagnosis does not exist.",
         )
+
     session.delete(diagnosis)
     session.commit()
