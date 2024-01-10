@@ -9,6 +9,7 @@ env:
   OPENAI_API_KEY: dummy_variable
   POSTGRES_USER: postgres
   POSTGRES_PASSWORD: postgres
+  ENVIRONMENT: ci-testing
 
 jobs:
   tests:
