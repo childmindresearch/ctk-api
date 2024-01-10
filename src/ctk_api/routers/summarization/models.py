@@ -18,5 +18,5 @@ class Summary(base_models.BaseTable):
     __tablename__ = "summaries"
 
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True, autoincrement=True)  # noqa: A003
-    anonymous_text: orm.Mapped[str] = orm.mapped_column(sqlalchemy.String(16384))
-    summary_text: orm.Mapped[str] = orm.mapped_column(sqlalchemy.String(16384))
+    anonymous_text: orm.Mapped[str] = orm.mapped_column(sqlalchemy.String(65536))
+    summary_text: orm.Mapped[str] = orm.mapped_column(sqlalchemy.String(65536))
