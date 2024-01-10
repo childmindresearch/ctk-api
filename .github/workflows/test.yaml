@@ -7,28 +7,22 @@ on:
 
 env:
   OPENAI_API_KEY: dummy_variable
-  ELASTIC_PASSWORD: dummy_variable
-  ELASTIC_URL: http://localhost:9200
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
 
 jobs:
   tests:
     runs-on: ubuntu-latest
 
     services:
-      elasticsearch:
-        image: docker.elastic.co/elasticsearch/elasticsearch:8.9.2
+      postgres:
+        image: postgres:16
         env:
-          discovery.type: single-node
-          cluster.name: elasticsearch
-          ELASTIC_PASSWORD: ${{ env.ELASTIC_PASSWORD }}
-          xpack.security.enabled: 'false'
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
         ports:
-        - 9200:9200
-        options: >-
-          --health-cmd "curl http://localhost:9200/_cluster/health"
-          --health-interval 2s
-          --health-timeout 5s
-          --health-retries 50
+        - 5432:5432
+
     steps:
     - uses: actions/checkout@v4
     - name: Install poetry

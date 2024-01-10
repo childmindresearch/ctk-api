@@ -3,7 +3,7 @@ import functools
 import logging
 import pathlib
 import tempfile
-from typing import Any, Literal
+from typing import Literal
 
 import docx
 import fastapi
@@ -11,17 +11,16 @@ import openai
 import pypandoc
 import yaml
 from fastapi import responses, status
+from sqlalchemy import orm
 
 from ctk_api.core import config
-from ctk_api.microservices import elastic
-from ctk_api.routers.summarization import anonymizer, schemas
+from ctk_api.routers.summarization import anonymizer, models, schemas
 
 settings = config.get_settings()
 LOGGER_NAME = settings.LOGGER_NAME
 OPENAI_API_KEY = settings.OPENAI_API_KEY
 OPENAI_CHAT_COMPLETION_MODEL = settings.OPENAI_CHAT_COMPLETION_MODEL
 OPENAI_CHAT_COMPLETION_PROMPT_FILE = settings.OPENAI_CHAT_COMPLETION_PROMPT_FILE
-ELASTIC_SUMMARIZATION_INDEX = settings.ELASTIC_SUMMARIZATION_INDEX
 
 logger = logging.getLogger(LOGGER_NAME)
 
@@ -53,44 +52,41 @@ def anonymize_report(docx_file: fastapi.UploadFile) -> str:
 
 async def summarize_report(
     report: schemas.Report,
-    elastic_client: elastic.ElasticClient,
+    session: orm.Session,
     background_tasks: fastapi.BackgroundTasks,
 ) -> responses.FileResponse:
     """Summarizes a clinical report.
 
     Clinical reports are sent to OpenAI. Both the report and the summary are
-    stored in Elasticsearch for caching and auditing.
+    stored in the database.
 
     Args:
         report: The report to summarize.
-        elastic_client: The Elasticsearch client.
+        session: The database session.
         background_tasks: The background tasks to run.
 
     Returns:
         str: The summarized file.
     """
     logger.info("Checking if request was made before.")
-    existing_document = await _check_for_existing_document(report, elastic_client)
+    existing_document = (
+        session.query(models.Summary)
+        .filter(
+            models.Summary.anonymous_text == report.text,
+        )
+        .first()
+    )
 
-    if existing_document and "summary" in existing_document:
+    if existing_document:
         return _summmary_as_docx_response(
-            existing_document["summary"],
+            existing_document.summary_text,
             background_tasks,
             status.HTTP_200_OK,
         )
 
-    logger.debug("Creating request document.")
-    document = await elastic_client.create(
-        index=ELASTIC_SUMMARIZATION_INDEX,
-        document={"report": report.text},
-    )
-
     system_prompt = get_prompt("system", "summarize_clinical_report")
-    logger.debug(
-        "Sending report %s to OpenAI.",
-        document["_id"],
-    )
 
+    logger.debug("Sending report to OpenAI.")
     client = openai.OpenAI(api_key=OPENAI_API_KEY.get_secret_value())
     response = client.chat.completions.create(
         model=OPENAI_CHAT_COMPLETION_MODEL,
@@ -100,22 +96,22 @@ async def summarize_report(
         ],
     )
 
-    logger.debug(
-        "Saving response for report %s from OpenAI.",
-        document["_id"],
-    )
+    logger.debug("Saving response from OpenAI.")
     response_text = response.choices[0].message.content
-    await elastic_client.update(
-        index=ELASTIC_SUMMARIZATION_INDEX,
-        document_id=document["_id"],
-        document={"summary": response_text},
-    )
+
     if response_text is None:
         logger.error("No response was received from OpenAI.")
         raise fastapi.HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="No response was received from OpenAI.",
         )
+
+    summary = models.Summary(
+        anonymous_text=report.text,
+        summary_text=response_text,
+    )
+    session.add(summary)
+    session.commit()
 
     return _summmary_as_docx_response(
         response_text,
@@ -139,39 +135,6 @@ def get_prompt(category: Literal["system", "user"], name: str) -> str:
     with OPENAI_CHAT_COMPLETION_PROMPT_FILE.open("r") as file:
         prompts = yaml.safe_load(file)
     return prompts[category][name]
-
-
-async def _check_for_existing_document(
-    report: schemas.Report,
-    elastic_client: elastic.ElasticClient,
-) -> dict[str, Any] | None:
-    """Checks if a document already exists in Elasticsearch.
-
-    Args:
-        report: The report to check for.
-        elastic_client: The Elasticsearch client.
-
-    Returns:
-        dict[str, Any] | None: The existing document if it exists, else None.
-    """
-    query = {"match_phrase": {"report": report.text}}
-    existing_document = await elastic_client.search(
-        index=ELASTIC_SUMMARIZATION_INDEX,
-        query=query,
-    )
-
-    if existing_document["hits"]["total"]["value"] == 0:
-        logger.debug("Request was not made before.")
-        return None
-    if existing_document["hits"]["total"]["value"] == 1:
-        logger.debug("Request was made before.")
-        return existing_document["hits"]["hits"][0]["_source"]
-
-    logger.error("More than one document was found for the request.")
-    raise fastapi.HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="More than one document was found for the request.",
-    )
 
 
 def _remove_file(filename: str | pathlib.Path) -> None:

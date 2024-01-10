@@ -39,27 +39,6 @@ class Settings(pydantic_settings.BaseSettings):  # type: ignore[valid-type, misc
         json_schema_extra={"env": "OPENAI_CHAT_COMPLETION_PROMPT_FILE"},
     )
 
-    ELASTIC_URL: pydantic.AnyHttpUrl = pydantic.Field(
-        "http://localhost:9200",
-        json_schema_extra={"env": "ELASTIC_URL"},
-    )
-    ELASTIC_USER: str = pydantic.Field(
-        "elastic",
-        json_schema_extra={"env": "ELASTIC_USER"},
-    )
-    ELASTIC_PASSWORD: pydantic.SecretStr = pydantic.Field(
-        ...,
-        json_schema_extra={"env": "ELASTIC_PASSWORD"},
-    )
-    ELASTIC_DIAGNOSES_INDEX: str = pydantic.Field(
-        "diagnoses",
-        json_schema_extra={"env": "ELASTIC_DIAGNOSES_INDEX"},
-    )
-    ELASTIC_SUMMARIZATION_INDEX: str = pydantic.Field(
-        "summarization",
-        json_schema_extra={"env": "ELASTIC_SUMMARIZATION_INDEX"},
-    )
-
     POSTGRES_URL: str = pydantic.Field(
         "localhost:5432",
         json_schema_extra={"env": "POSTGRES_HOST"},
