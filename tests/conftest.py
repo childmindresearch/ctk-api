@@ -37,6 +37,8 @@ def document() -> Generator[tempfile._TemporaryFileWrapper, None, None]:
     doc.add_heading("clinical summary and impressions", 1)
     doc.add_paragraph("Name: Lea Avatar")
     doc.add_paragraph("He she herself man")
+    doc.add_heading("recommendations", 1)
+    doc.add_paragraph("hello!")
 
     with tempfile.NamedTemporaryFile(suffix=".docx") as temp_file:
         doc.save(temp_file.name)
