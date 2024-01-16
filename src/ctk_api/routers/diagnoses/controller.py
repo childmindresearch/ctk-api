@@ -106,7 +106,7 @@ def patch_diagnosis_node(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="The specified parent diagnosis does not exist.",
             )
-        diagnosis.parent_id = diagnosis.parent.id  # type: ignore[assignment]
+        diagnosis.parent_id = diagnosis.parent.id  # type: ignore[union-attr]
 
         traversal = diagnosis.parent
         while traversal is not None:
