@@ -1,4 +1,5 @@
 """This module contains the anonymization logic for clinical reports."""
+import dataclasses
 import logging
 import re
 
@@ -14,11 +15,19 @@ LOGGER_NAME = settings.LOGGER_NAME
 
 logger = logging.getLogger(LOGGER_NAME)
 
-PARAGRAPHS_OF_INTEREST = {
-    "clinical summary and impressions",
-    "mental health assessment",
-    "dsm-5 diagnostic summary",
-}
+
+@dataclasses.dataclass
+class ParagraphsOfInterest:
+    """Represents a range of paragraphs of interest within a document.
+
+    Attributes:
+        start (str): The starting keyword or phrase of the paragraphs of interest.
+        end (str): The ending keyword or phrase of the paragraphs of interest.
+    """
+
+    start: str = "clinical summary and impressions"
+    end: str = "recommendations"
+
 
 PRONOUN_REPLACEMENTS = {
     ("he", "he/she"),
@@ -84,11 +93,19 @@ def get_diagnostic_paragraphs(
     paragraphs = []
     retain_this = False
     for paragraph in document.paragraphs:
-        if paragraph.style.name.startswith("Heading"):
-            sanitized_text = paragraph.text.lower().strip()
-            retain_this = sanitized_text in PARAGRAPHS_OF_INTEREST
+        sanitized_text = paragraph.text.lower().strip()
+        if sanitized_text == ParagraphsOfInterest.start:
+            retain_this = True
+        elif sanitized_text == ParagraphsOfInterest.end:
+            break
         if retain_this:
             paragraphs.append(paragraph)
+    else:
+        logger.error("Diagnostic paragraphs not found.")
+        raise fastapi.HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="Diagnostic paragraphs not found.",
+        )
     return paragraphs
 
 
