@@ -86,27 +86,3 @@ class DiagnosisNodeOutput(pydantic.BaseModel):
             "description": "The subclasses of the diagnosis.",
         },
     )
-
-
-class DiagnosisNodeMove(pydantic.BaseModel):
-    """Schema for moving a node.
-
-    Attributes:
-        parent_id: The identifier of the parent node.
-    """
-
-    parent_id: int | None = pydantic.Field(
-        ...,
-        json_schema_extra={
-            "example": 1,
-            "description": "The identifier of the parent node.",
-        },
-    )
-
-    child_id: int = pydantic.Field(
-        ...,
-        json_schema_extra={
-            "example": 1,
-            "description": "The identifier of the child node.",
-        },
-    )
