@@ -1,4 +1,5 @@
 """A module for interacting with the SQL database."""
+import json
 import logging
 from collections import abc
 from typing import Any
@@ -15,6 +16,7 @@ POSTGRES_USER = settings.POSTGRES_USER
 POSTGRES_PASSWORD = settings.POSTGRES_PASSWORD
 SQLITE_FILE = settings.SQLITE_FILE
 ENVIRONMENT = settings.ENVIRONMENT
+DIAGNOSES_FILE = settings.DIAGNOSES_FILE
 
 logger = logging.getLogger(LOGGER_NAME)
 
@@ -46,7 +48,7 @@ class Database:
             ),
         )
 
-    def create_database(self) -> None:
+    def create_database_schema(self) -> None:
         """Creates the database schema."""
         logger.debug("Creating database schema.")
         Base.metadata.create_all(self.engine)
@@ -81,3 +83,32 @@ def get_session() -> abc.Generator[orm.Session, None, None]:
         yield session
     finally:
         session.close()
+
+
+def create_dev_data() -> None:
+    """Creates data for development environments."""
+    from ctk_api.routers.diagnoses import controller, models, schemas
+
+    if ENVIRONMENT != "development":
+        logger.debug("Not in development environment. Skipping.")
+        return
+
+    logger.debug("Creating development data.")
+    database = Database()
+    session = database.session_factory()
+    existing_data = session.query(models.DiagnosisNode).all()
+    if existing_data:
+        logger.debug("Development data already exists.")
+        return
+
+    logger.debug("Creating development data.")
+    with DIAGNOSES_FILE.open("r") as diagnoses_file:
+        diagnoses = json.load(diagnoses_file)
+    for diagnosis in diagnoses:
+        controller.create_diagnosis_node(
+            diagnosis=schemas.DiagnosisNodeCreate(**diagnosis),
+            parent_id=None,
+            session=session,
+        )
+
+    session.commit()

@@ -14,7 +14,7 @@ def _reset_testing_db() -> None:
     """Resets the testing database."""
     database = sql.Database()
     sql.Base.metadata.drop_all(database.engine)
-    database.create_database()
+    database.create_database_schema()
 
 
 @pytest.fixture()
