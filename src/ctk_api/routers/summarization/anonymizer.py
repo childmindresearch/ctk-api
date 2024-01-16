@@ -16,19 +16,6 @@ LOGGER_NAME = settings.LOGGER_NAME
 logger = logging.getLogger(LOGGER_NAME)
 
 
-@dataclasses.dataclass
-class ParagraphsOfInterest:
-    """Represents a range of paragraphs of interest within a document.
-
-    Attributes:
-        start (str): The starting keyword or phrase of the paragraphs of interest.
-        end (str): The ending keyword or phrase of the paragraphs of interest.
-    """
-
-    start: str = "clinical summary and impressions"
-    end: str = "recommendations"
-
-
 PRONOUN_REPLACEMENTS = {
     ("he", "he/she"),
     ("she", "he/she"),
@@ -47,6 +34,19 @@ GENDER_REPLACEMENTS = {
     ("son", "son/daughter"),
     ("daughter", "son/daughter"),
 }
+
+
+@dataclasses.dataclass
+class ParagraphsOfInterest:
+    """Represents a range of paragraphs of interest within a document.
+
+    Attributes:
+        start (str): The starting keyword or phrase of the paragraphs of interest.
+        end (str): The ending keyword or phrase of the paragraphs of interest.
+    """
+
+    start: str = "clinical summary and impressions"
+    end: str = "recommendations"
 
 
 def get_patient_name(document: docx.Document) -> tuple[str, str]:
