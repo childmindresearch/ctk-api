@@ -7,7 +7,7 @@ from sqlalchemy import orm
 from ctk_api.microservices import sql
 
 
-class BaseTable(sql.Base):
+class BaseTable(sql.Base):  # type: ignore[misc, valid-type]
     """Basic settings of a table. Contains an id, time_created, and time_updated."""
 
     __abstract__ = True

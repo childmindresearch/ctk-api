@@ -18,7 +18,7 @@ class DiagnosisNode(base_models.BaseTable):
 
     __tablename__ = "diagnoses"
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True, autoincrement=True)  # noqa: A003
+    id: orm.Mapped[int] = orm.mapped_column(primary_key=True, autoincrement=True)
     text: orm.Mapped[str] = orm.mapped_column(sqlalchemy.String(2048))
     parent_id = orm.mapped_column(
         sqlalchemy.Integer,

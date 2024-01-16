@@ -76,14 +76,14 @@ def create_diagnosis_node(
 
 def patch_diagnosis_node(
     identifier: int,
-    new_schema: schemas.DiagnosisNodePatch,
+    patch: schemas.DiagnosisNodePatch,
     session: orm.Session,
 ) -> models.DiagnosisNode:
     """Patches a diagnosis.
 
     Args:
         identifier: The identifier of the diagnosis node to patch.
-        new_schema: The new schema of the diagnosis node.
+        patch: The new schema of the diagnosis node.
         session: The SQLAlchemy session.
 
     Returns:
@@ -96,7 +96,27 @@ def patch_diagnosis_node(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="The specified diagnosis does not exist.",
         )
-    diagnosis.text = new_schema.text
+    if patch.text is not None:
+        diagnosis.text = patch.text
+
+    if patch.parent_id is not None:
+        diagnosis.parent = session.get(models.DiagnosisNode, patch.parent_id)
+        if diagnosis.parent is None:
+            raise fastapi.HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="The specified parent diagnosis does not exist.",
+            )
+        diagnosis.parent_id = diagnosis.parent.id  # type: ignore[union-attr]
+
+        traversal = diagnosis.parent
+        while traversal is not None:
+            if traversal.id == diagnosis.id:  # type: ignore[union-attr]
+                raise fastapi.HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot move a diagnosis to a child of itself.",
+                )
+            traversal = traversal.parent  # type: ignore[union-attr]
+
     session.commit()
     return diagnosis
 

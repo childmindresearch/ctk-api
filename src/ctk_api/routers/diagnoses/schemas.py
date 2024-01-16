@@ -33,11 +33,18 @@ class DiagnosisNodePatch(pydantic.BaseModel):
         text: The new text of the diagnosis node.
     """
 
-    text: str = pydantic.Field(
-        ...,
+    text: str | None = pydantic.Field(
+        None,
         json_schema_extra={
             "example": "Autism Spectrum Disorder",
             "description": "The new text of the diagnosis node.",
+        },
+    )
+    parent_id: int | None = pydantic.Field(
+        None,
+        json_schema_extra={
+            "example": 1,
+            "description": "The identifier of the parent diagnosis node.",
         },
     )
 
@@ -52,7 +59,7 @@ class DiagnosisNodeOutput(pydantic.BaseModel):
 
     model_config = pydantic.ConfigDict(from_attributes=True)
 
-    id: int = pydantic.Field(  # noqa: A003
+    id: int = pydantic.Field(
         ...,
         json_schema_extra={
             "example": 1,

@@ -91,9 +91,9 @@ async def create_diagnosis_node(
     },
 )
 async def patch_diagnosis_node(
-    text: schemas.DiagnosisNodePatch = fastapi.Body(
+    patch: schemas.DiagnosisNodePatch = fastapi.Body(
         ...,
-        description="The new text to add to the node.",
+        description="The new data to add to the node.",
     ),
     diagnosis_id: int = fastapi.Path(
         description="The identifier of the diagnosis to update.",
@@ -103,7 +103,7 @@ async def patch_diagnosis_node(
     """Updates a diagnosis.
 
     Args:
-        text: The new text of the diagnosis.
+        patch: The patch for the diagnosis.
         diagnosis_id: The ID of the diagnosis to update.
         session: The database session.
 
@@ -113,7 +113,7 @@ async def patch_diagnosis_node(
     logger.debug("Updating diagnosis %s.", diagnosis_id)
     response = controller.patch_diagnosis_node(
         diagnosis_id,
-        text,
+        patch,
         session,
     )
     logger.debug("Updated diagnosis %s.", diagnosis_id)

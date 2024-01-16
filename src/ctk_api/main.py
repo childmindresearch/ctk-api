@@ -24,7 +24,8 @@ async def lifespan(app: fastapi.FastAPI) -> AsyncGenerator[None, None]:  # noqa:
     logger.info("Running startup events.")
     logger.debug("Initializing SQL microservice.")
     database = sql.Database()
-    database.create_database()
+    database.create_database_schema()
+    sql.create_dev_data()
     yield
 
 

@@ -55,7 +55,7 @@ def test_create_database(
     """Test that the database schema is created."""
     mock_create_all = mocker.patch.object(sql.Base.metadata, "create_all")
 
-    database_instance.create_database()
+    database_instance.create_database_schema()
 
     mock_create_all.assert_called_once_with(database_instance.engine)
 
