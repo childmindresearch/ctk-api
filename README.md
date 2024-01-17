@@ -1,5 +1,5 @@
 # Clinician Toolkit API
-[![Build](https://github.com/cmi-dair/ctk-api/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/cmi-dair/ctk-api/actions/workflows/test.yaml?query=branch%3Amain)
+[![Build](https://github.com/childmindresearch/ctk-api/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/childmindresearch/ctk-api/actions/workflows/test.yaml?query=branch%3Amain)
 ![stability-wip](https://img.shields.io/badge/stability-work_in_progress-lightgrey.svg)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
@@ -11,7 +11,7 @@ To get started, clone this repository and run `poetry install` to install the de
 
 ## Deployment
 
-The deployment of this application is handled by the [CTK-Orchestrator repository](https://github.com/cmi-dair/ctk-orchestrator). On each push to main, this repository will be built and deployed to the Github Container Registry.
+The deployment of this application is handled by the [CTK-Orchestrator repository](https://github.com/childmindresearch/ctk-orchestrator). On each push to main, this repository will be built and deployed to the Github Container Registry.
 
 ## Settings
 
