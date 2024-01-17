@@ -41,7 +41,7 @@ app = fastapi.FastAPI(
     version="0.1.0",
     contact={
         "name": "Center for Data Analytics, Innovation, and Rigor",
-        "url": "https://github.com/cmi-dair/",
+        "url": "https://github.com/childmindresearch/",
         "email": "dair@childmind.org",
     },
     swagger_ui_parameters={"operationsSorter": "method"},
