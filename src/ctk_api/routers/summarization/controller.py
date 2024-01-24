@@ -1,19 +1,16 @@
 """The controller for the summarization router."""
 import functools
 import logging
-import pathlib
-import tempfile
 from typing import Literal
 
 import docx
 import fastapi
 import openai
-import pypandoc
 import yaml
 from fastapi import responses, status
 from sqlalchemy import orm
 
-from ctk_api.core import config
+from ctk_api.core import config, utils
 from ctk_api.routers.summarization import anonymizer, models, schemas
 
 settings = config.get_settings()
@@ -78,7 +75,7 @@ async def summarize_report(
     )
 
     if existing_document:
-        return _summmary_as_docx_response(
+        return utils.markdown_text_as_docx_response(
             existing_document.summary_text,
             background_tasks,
             status.HTTP_200_OK,
@@ -113,7 +110,7 @@ async def summarize_report(
     session.add(summary)
     session.commit()
 
-    return _summmary_as_docx_response(
+    return utils.markdown_text_as_docx_response(
         response_text,
         background_tasks,
         status.HTTP_201_CREATED,
@@ -135,50 +132,3 @@ def get_prompt(category: Literal["system", "user"], name: str) -> str:
     with OPENAI_CHAT_COMPLETION_PROMPT_FILE.open("r") as file:
         prompts = yaml.safe_load(file)
     return prompts[category][name]
-
-
-def _remove_file(filename: str | pathlib.Path) -> None:
-    """Removes a file.
-
-    Args:
-        filename: The filename of the file to remove.
-    """
-    logger.debug("Removing file %s.", filename)
-    pathlib.Path(filename).unlink()
-
-
-def _summmary_as_docx_response(
-    markdown_text: str,
-    background_tasks: fastapi.BackgroundTasks,
-    status_code: int,
-) -> responses.FileResponse:
-    """Converts markdown text to a docx file.
-
-    Args:
-        markdown_text: The markdown text to convert.
-        background_tasks: The background tasks to run.
-        status_code: The status code to return.
-
-    Returns:
-        The response with the docx file.
-    """
-    with tempfile.NamedTemporaryFile(
-        suffix=".docx",
-        delete=False,
-    ) as output_file, tempfile.NamedTemporaryFile(suffix=".md") as markdown_file:
-        markdown_file.write(markdown_text.encode("utf-8"))
-        markdown_file.seek(0)
-        pypandoc.convert_file(
-            markdown_file.name,
-            "docx",
-            outputfile=str(output_file.name),
-        )
-
-    background_tasks.add_task(_remove_file, output_file.name)
-    return responses.FileResponse(
-        output_file.name,
-        filename="summary.docx",
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        background=background_tasks,
-        status_code=status_code,
-    )

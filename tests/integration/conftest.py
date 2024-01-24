@@ -19,6 +19,7 @@ class Endpoints(str, enum.Enum):
     POST_DIAGNOSIS = f"{API_ROOT}/diagnoses"  # noqa: PIE796
     PATCH_DIAGNOSIS = f"{API_ROOT}/diagnoses/{{diagnosis_id}}"
     DELETE_DIAGNOSIS = f"{API_ROOT}/diagnoses/{{diagnosis_id}}"  # noqa: PIE796
+    POST_MARKDOWN_TO_DOCX = f"{API_ROOT}/file_conversion/md2docx"
 
 
 @pytest.fixture()

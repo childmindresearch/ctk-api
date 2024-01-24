@@ -9,6 +9,7 @@ from fastapi.middleware import cors
 from ctk_api.core import config, middleware
 from ctk_api.microservices import sql
 from ctk_api.routers.diagnoses import views as diagnoses_views
+from ctk_api.routers.file_conversion import views as file_conversion_views
 from ctk_api.routers.summarization import views as summarization_views
 
 settings = config.get_settings()
@@ -33,6 +34,7 @@ logger.info("Initializing API routes.")
 api_router = fastapi.APIRouter(prefix="/api/v1")
 api_router.include_router(diagnoses_views.router)
 api_router.include_router(summarization_views.router)
+api_router.include_router(file_conversion_views.router)
 
 logger.info("Starting API.")
 app = fastapi.FastAPI(
