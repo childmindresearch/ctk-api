@@ -89,7 +89,7 @@ def test_summarization_endpoint_new(
         == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
     assert (
-        response.headers["Content-Disposition"] == 'attachment; filename="summary.docx"'
+        response.headers["Content-Disposition"] == 'attachment; filename="md2docx.docx"'
     )
 
 
@@ -110,5 +110,5 @@ def test_summarization_endpoint_exists(
         == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
     assert (
-        response.headers["Content-Disposition"] == 'attachment; filename="summary.docx"'
+        response.headers["Content-Disposition"] == 'attachment; filename="md2docx.docx"'
     )
