@@ -9,10 +9,13 @@ from sqlalchemy import orm
 from ctk_api.microservices import sql
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(autouse=True)
 def _reset_testing_db() -> None:
     """Resets the testing database."""
     database = sql.Database()
+    if database.get_db_url() != "sqlite:///tests/test.sqlite":
+        msg = "Testing database is not configured correctly."
+        raise ValueError(msg)
     sql.Base.metadata.drop_all(database.engine)
     database.create_database_schema()
 

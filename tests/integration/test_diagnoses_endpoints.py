@@ -90,20 +90,24 @@ async def test_patch_diagnosis_node(
     endpoints: conftest.Endpoints,
     client: testclient.TestClient,
 ) -> None:
-    """Tests patching a diagnosis."""
+    """Tests that patching a diagnosis persits in the DB."""
     diagnosis = {"text": "test_text", "children": []}
     response_post = client.post(endpoints.POST_DIAGNOSIS, json={"diagnosis": diagnosis})
 
-    response = client.patch(
+    response_patch = client.patch(
         endpoints.PATCH_DIAGNOSIS.format(
             diagnosis_id=response_post.json()["id"],
         ),
         json={"text": "test_text_updated"},
     )
+    response_get = client.get(endpoints.GET_DIAGNOSES)
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["id"] == response_post.json()["id"]
-    assert response.json()["text"] == "test_text_updated"
+    assert response_patch.status_code == status.HTTP_200_OK
+    assert response_patch.json()["id"] == response_post.json()["id"]
+    assert response_patch.json()["text"] == "test_text_updated"
+    assert response_get.status_code == status.HTTP_200_OK
+    assert len(response_get.json()) == 1
+    assert response_get.json()[0]["text"] == "test_text_updated"
 
 
 @pytest.mark.asyncio()
@@ -118,13 +122,16 @@ async def test_delete_diagnosis_node(
         json={"diagnosis": diagnosis},
     )
 
-    response = client.delete(
+    response_delete = client.delete(
         endpoints.DELETE_DIAGNOSIS.format(
             diagnosis_id=response_parent.json()["id"],
         ),
     )
+    response_get = client.get(endpoints.GET_DIAGNOSES)
 
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response_delete.status_code == status.HTTP_204_NO_CONTENT
+    assert response_get.status_code == status.HTTP_200_OK
+    assert len(response_get.json()) == 0
 
 
 @pytest.mark.asyncio()
