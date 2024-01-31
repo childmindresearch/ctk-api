@@ -6,14 +6,21 @@ import docx
 import pytest
 from sqlalchemy import orm
 
+from ctk_api.core import config
 from ctk_api.microservices import sql
+
+settings = config.get_settings()
+ENVIRONMENT = settings.ENVIRONMENT
 
 
 @pytest.fixture(autouse=True)
 def _reset_testing_db() -> None:
     """Resets the testing database."""
     database = sql.Database()
-    if database.get_db_url() != "sqlite:///tests/test.sqlite":
+    if (
+        database.get_db_url() != "sqlite:///tests/test.sqlite"
+        and ENVIRONMENT != "ci-testing"
+    ):
         msg = "Testing database is not configured correctly."
         raise ValueError(msg)
     sql.Base.metadata.drop_all(database.engine)
