@@ -9,13 +9,13 @@ packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-fastapi = "^0.108.0"
-pydantic = "^2.5.3"
+fastapi = "^0.109.0"
+pydantic = "^2.6.0"
 python-docx = "^1.1.0"
 pydantic-settings = "^2.1.0"
 python-multipart = "^0.0.6"
-uvicorn = "^0.25.0"
-openai = "^1.6.1"
+uvicorn = "^0.27.0"
+openai = "^1.10.0"
 pypandoc = "^1.12"
 pyyaml = "^6.0.1"
 email-validator = "^2.1.0.post1"
