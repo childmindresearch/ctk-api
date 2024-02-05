@@ -1,3 +1,4 @@
+*.docx
 *.sqlite
 .DS_store
 .ruff_cache
