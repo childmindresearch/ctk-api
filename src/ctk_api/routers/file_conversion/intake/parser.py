@@ -62,7 +62,7 @@ class Patient:
 
         self.education = Education(patient_df)
         self.development = Development(patient_df)
-        self.guardians: list[Guardian] = []
+        self.guardian = Guardian(patient_df)
 
     @property
     def full_name(self) -> str:
@@ -102,6 +102,11 @@ class Guardian:
         """
         self.first_name = patient_df["guardian_first_name"]
         self.last_name = patient_df["guardian_last_name"]
+
+    @property
+    def full_name(self) -> str:
+        """The full name of the guardian."""
+        return f"{self.first_name} {self.last_name}"
 
 
 class Education:

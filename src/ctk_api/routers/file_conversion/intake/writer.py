@@ -25,6 +25,7 @@ class ReportWriter:
             "preferred_name": self.intake.patient.preferred_name,
             "date_of_birth": self.intake.patient.date_of_birth.strftime("%m/%d/%Y"),
             "date_of_intake": self.intake.date_of_intake.strftime("%m/%d/%Y"),
+            "reporting_guardian": self.intake.patient.guardian.full_name,
         }
 
         for template, replacement in replacements.items():
@@ -38,13 +39,15 @@ class ReportWriter:
         iep = patient.education.individualized_educational_program.transform()
         gender = self._gender_and_age_to_string()
 
-        text = f"""At the time of enrollment, {patient.preferred_name} was a
-{patient.age}-year-old, {handedness} {gender}. {patient.preferred_name}
-was placed in a {patient.education.school_type.name} school grade
-{patient.education.grade} classroom at {patient.education.school_name}.
-{patient.preferred_name} {iep}.
-"""
-        text = text.replace("\n", " ").replace("  ", " ")
+        text = f"""
+            At the time of enrollment, {patient.preferred_name} was a
+            {patient.age}-year-old, {handedness} {gender}.
+            {patient.preferred_name} was placed in a
+            {patient.education.school_type.name} school grade
+            {patient.education.grade} classroom at
+            {patient.education.school_name}. {patient.preferred_name} {iep}.
+        """
+        text = self._remove_whitespace(text)
 
         self.report.add_heading("REASON FOR VISIT", level=1)
         self.report.add_paragraph(text)
@@ -60,18 +63,20 @@ was placed in a {patient.education.school_type.name} school grade
         """Writes the prenatal and birth history of the patient to the report."""
         patient = self.intake.patient
         development = patient.development
-        reporting_guardian = "TODO: REPORTING GUARDIAN NAME"
         pregnancy_symptoms = development.birth_complications.transform()
         delivery = development.delivery.transform()
         delivery_location = development.delivery_location.transform()
         adaptability = development.adaptability.transform()
 
-        prenatal_text = f"""{reporting_guardian} reported {pregnancy_symptoms}.
-    {patient.preferred_name} was born at {development.weeks_of_pregnancy} of
-    gestation with {delivery} at {delivery_location}.
-    {patient.preferred_name} had an {adaptability}
-    during infancy and was {development.soothing_difficulty.name} to soothe.
-    """
+        prenatal_text = f"""
+            {patient.guardian.full_name} reported {pregnancy_symptoms}.
+            {patient.preferred_name} was born at
+            {development.weeks_of_pregnancy} of gestation with {delivery} at
+            {delivery_location}. {patient.preferred_name} had an {adaptability}
+            during infancy and was {development.soothing_difficulty.name} to
+            soothe.
+        """
+        prenatal_text = self._remove_whitespace(prenatal_text)
 
         self.report.add_heading("Prenatal and Birth History", level=2)
         self.report.add_paragraph(prenatal_text)
@@ -84,17 +89,16 @@ was placed in a {patient.education.school_type.name} school grade
         """Writes the early education information to the report."""
         patient = self.intake.patient
         development = patient.development
-        reporting_guardian = "TODO: REPORTING GUARDIAN NAME"
+
+        reporting_guardian = patient.guardian.full_name
         early_intervention = development.early_intervention_age.transform()
         cpse = development.cpse_age.transform()
 
-        early_education_text = f"""{reporting_guardian} reported that
-{patient.preferred_name} {early_intervention} and {cpse}.
-"""
-        early_education_text = early_education_text.replace("\n", " ").replace(
-            "  ",
-            " ",
-        )
+        early_education_text = f"""
+            {reporting_guardian} reported that
+            {patient.preferred_name} {early_intervention} and {cpse}.
+        """
+        early_education_text = self._remove_whitespace(early_education_text)
         self.report.add_heading("Early Educational Interventions", level=2)
         self.report.add_paragraph(early_education_text)
 
@@ -131,13 +135,13 @@ was placed in a {patient.education.school_type.name} school grade
             "MENTAL STATUS EXAMINATION AND TESTING BEHAVIORAL OBSERVATIONS",
             level=1,
         )
-        run = self.report.paragraph[-1].add_run()
+        run = self.report.paragraphs[-1].add_run()
         run.add_break(text.WD_BREAK.PAGE)
         self.report.add_heading(
             "Insert List of Tests, Normal Curve and RA Text",
             level=0,
         )
-        run = self.report.paragraph[-1].add_run()
+        run = self.report.paragraphs[-1].add_run()
         run.add_break(text.WD_BREAK.PAGE)
         self.report.add_heading("CLINICAL SUMMARY AND IMPRESSIONS", level=1)
         self.report.add_heading("Cognition, Language and Learning Evaluation", level=2)
@@ -171,6 +175,11 @@ was placed in a {patient.education.school_type.name} school grade
         if age < upper_age_cutoff:
             return f"young {gender_string}"
         return gender_string
+
+    @staticmethod
+    def _remove_whitespace(text: str) -> str:
+        """Removes excess whitespace from a string."""
+        return " ".join(text.split())
 
 
 class DocxReplace:

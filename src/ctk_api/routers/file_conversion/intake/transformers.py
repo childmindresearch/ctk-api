@@ -170,7 +170,7 @@ class BirthComplications(
         )
 
 
-class BirthDelivery:
+class BirthDelivery(Transformer[descriptors.BirthDelivery]):
     """The transformer for birth delivery."""
 
     def __init__(self, value: descriptors.BirthDelivery) -> None:
