@@ -1,6 +1,5 @@
 """Contains report writing functionality for intake information."""
 import functools
-import re
 import tempfile
 from collections.abc import Callable
 from typing import ParamSpec, TypeVar
@@ -12,7 +11,7 @@ from docxcompose import composer
 from fastapi import status
 
 from ctk_api.core import config
-from ctk_api.routers.file_conversion.intake import parser
+from ctk_api.routers.file_conversion.intake import docx_utils, parser
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -110,7 +109,7 @@ class ReportWriter:
 
         for template, replacement in replacements.items():
             template_formatted = "{{" + template.upper() + "}}"
-            DocxReplace(self.report).replace(template_formatted, replacement)
+            docx_utils.DocxReplace(self.report).replace(template_formatted, replacement)
 
     @write_with_rgb_text(RGB_INTAKE)
     def write_reason_for_visit(self) -> None:
@@ -335,10 +334,12 @@ class ReportWriter:
 
         for template, replacement in replacements.items():
             template_formatted = "{{" + template.upper() + "}}"
-            DocxReplace(self.report_closing_statement).replace(
+            docx_utils.DocxReplace(self.report_closing_statement).replace(
                 template_formatted,
                 replacement,
             )
+
+        docx_utils.correct_they_conjugation(self.report_closing_statement)
 
         composer_obj = composer.Composer(self.report)
         composer_obj.append(self.report_closing_statement)
@@ -383,89 +384,3 @@ class ReportWriter:
     def _remove_whitespace(text: str) -> str:
         """Removes excess whitespace from a string."""
         return " ".join(text.split())
-
-
-class DocxReplace:
-    """Finds and replaces text in a Word document."""
-
-    def __init__(self, document: docx.Document) -> None:
-        """Initializes a DocxReplace object for finding and replacing.
-
-        Args:
-            document: The document to be written.
-
-        """
-        self.document = document
-
-    def replace(self, find: str, replace: str) -> None:
-        """Finds and replaces text in a Word document.
-
-        Args:
-            find: The text to find.
-            replace: The text to replace.
-        """
-        for paragraph in self.document.paragraphs:
-            self._replace_in_section(paragraph, find, replace)
-
-        for section in self.document.sections:
-            for paragraph in (
-                *section.footer.paragraphs,
-                *section.header.paragraphs,
-            ):
-                self._replace_in_section(paragraph, find, replace)
-
-    @staticmethod
-    def _replace_in_section(
-        paragraph: docx.text.paragraph.Paragraph,
-        find: str,
-        replace: str,
-    ) -> None:
-        """Finds and replaces text in a Word document section.
-
-        Applying a find and replace directly to the text property will lose
-        formatting. python-docx splits each paragraph into runs, where each run
-        has consistent styling. So we apply the find and replace to the runs.
-        The replacement will gain the formatting of the first character of the
-        text it replaces.
-
-        This function modifies in place.
-
-        Args:
-            paragraph: The Word document's paragraph.
-            find: The text to find.
-            replace: The text to replace.
-
-        """
-        if find not in paragraph.text:
-            return
-
-        for paragraph_run in paragraph.runs:
-            paragraph_run.text = paragraph_run.text.replace(find, replace)
-
-        if find not in paragraph.text:
-            return
-
-        match_indices = [match.start() for match in re.finditer(find, paragraph.text)]
-        run_lengths = [len(run.text) for run in paragraph.runs]
-        for run_index in range(len(paragraph.runs) - 1, -1, -1):
-            # Reverse loop so changes to run lengths don't affect the next
-            # iteration.
-            run_start = sum(run_lengths[:run_index])
-            run_end = run_start + run_lengths[run_index]
-            run_obj = paragraph.runs[run_index]
-            for match_index in match_indices:
-                if match_index < run_start or match_index >= run_end:
-                    continue
-
-                overflow = match_index + len(find) - run_end
-                run_obj.text = run_obj.text[: match_index - run_start] + replace
-
-                current_index = run_index + 1
-                while overflow > 0:
-                    next_run = paragraph.runs[current_index]
-                    new_overflow = overflow - len(next_run.text)
-                    next_run.text = next_run.text[overflow:]
-                    overflow = new_overflow
-                    current_index += 1
-
-                break
