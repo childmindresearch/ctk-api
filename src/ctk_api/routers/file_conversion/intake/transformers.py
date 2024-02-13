@@ -36,18 +36,6 @@ class Transformer(Generic[T], abc.ABC):
         self.other = other
 
     @abc.abstractmethod
-    def matches(self) -> bool:
-        """Determines if the given object matches a certain condition.
-
-        Args:
-            obj: The object to be checked.
-
-        Returns:
-            bool: True if the object matches the condition, False otherwise.
-        """
-        ...
-
-    @abc.abstractmethod
     def transform(self) -> str:
         """Transforms the given object.
 
@@ -76,21 +64,13 @@ class Handedness(Transformer[descriptors.Handedness]):
         """Initializes the handedness transformer."""
         super().__init__(descriptors.Handedness(value))
 
-    def matches(self) -> bool:
-        """Determines if handedness is known.
-
-        Returns:
-            bool: True if handedness is not unknown.
-        """
-        return self.base != descriptors.Handedness.unknown
-
     def transform(self) -> str:
         """Transforms the handedness information to a string.
 
         Returns:
             str: The transformed object.
         """
-        if not self.matches():
+        if self.base == descriptors.Handedness.unknown:
             return ""
         return f"{self.base.name}-handed"
 
@@ -104,21 +84,13 @@ class IndividualizedEducationProgram(
         """Initializes the individualized education program transformer."""
         super().__init__(descriptors.IndividualizedEducationProgram(value))
 
-    def matches(self) -> bool:
-        """Determines if the patient has an individualized education program.
-
-        Returns:
-            bool: True if the patient has an individualized education program.
-        """
-        return self.base == descriptors.IndividualizedEducationProgram.yes
-
     def transform(self) -> str:
         """Transforms the individualized education program information to a string.
 
         Returns:
             str: The transformed object.
         """
-        if not self.matches():
+        if self.base == descriptors.IndividualizedEducationProgram.yes:
             return "did not have an Individualized Education Program (IEP)"
         return "had an Individualized Education Program (IEP)"
 
@@ -143,21 +115,13 @@ class BirthComplications(
                 ),
             )
 
-    def matches(self) -> bool:
-        """Determines if the patient had birth complications.
-
-        Returns:
-            bool: True if the patient had birth complications.
-        """
-        return descriptors.BirthComplications.none_of_the_above not in self.base
-
     def transform(self) -> str:
         """Transforms the birth complications information to a string.
 
         Returns:
             str: The transformed object.
         """
-        if not self.matches():
+        if descriptors.BirthComplications.none_of_the_above in self.base:
             return "no birth complications"
 
         names = [val.name.replace("_", " ") for val in self.base]
@@ -177,21 +141,13 @@ class BirthDelivery(Transformer[descriptors.BirthDelivery]):
         """Initializes the birth delivery transformer."""
         self.base = descriptors.BirthDelivery(value)
 
-    def matches(self) -> bool:
-        """Determines if the patient's birth delivery is known.
-
-        Returns:
-            bool: True if the patient's birth delivery is not unknown.
-        """
-        return self.base != descriptors.BirthDelivery.unknown
-
     def transform(self) -> str:
         """Transforms the birth delivery information to a string.
 
         Returns:
             str: The transformed object.
         """
-        if not self.matches():
+        if self.base == descriptors.BirthDelivery.unknown:
             return "an unknown type of delivery"
         if self.base == descriptors.BirthDelivery.vaginal:
             return "a vaginal delivery"
@@ -206,21 +162,13 @@ class DeliveryLocation(Transformer[descriptors.DeliveryLocation]):
         self.base = descriptors.DeliveryLocation(value)
         self.other = other
 
-    def matches(self) -> bool:
-        """Determines if the patient's birth location is known.
-
-        Returns:
-            bool: True if the patient's birth location is not unknown.
-        """
-        return self.base != descriptors.DeliveryLocation.other
-
     def transform(self) -> str:
         """Transforms the birth location information to a string.
 
         Returns:
             str: The transformed object.
         """
-        if not self.matches():
+        if self.base == descriptors.DeliveryLocation.other:
             if self.other is None:
                 return "an unspecified location"
             return self.other
@@ -237,35 +185,19 @@ class Adaptability(Transformer[descriptors.Adaptability]):
         """Initializes the infant adaptability transformer."""
         self.base = descriptors.Adaptability(value)
 
-    def matches(self) -> bool:
-        """Determines if the patient's adaptability is easy.
-
-        Returns:
-            bool: True if the patient's adaptability is easy.
-        """
-        return self.base == descriptors.Adaptability.easy
-
     def transform(self) -> str:
         """Transforms the infant adaptability information to a string.
 
         Returns:
             str: The transformed object.
         """
-        if not self.matches():
-            return "a difficult temperament"
+        if self.base != descriptors.Adaptability.difficult:
+            return "a slow to warm up temperament"
         return "an adaptable temperament"
 
 
 class EarlyIntervention(Transformer[str]):
     """The transformer for early intervention."""
-
-    def matches(self) -> bool:
-        """Determines if the patient had early intervention.
-
-        Returns:
-            bool: True if the patient had early intervention.
-        """
-        return bool(self.base)
 
     def transform(self) -> str:
         """Transforms the early intervention information to a string.
@@ -273,7 +205,7 @@ class EarlyIntervention(Transformer[str]):
         Returns:
             str: The transformed object.
         """
-        if not self.matches():
+        if not self.base:
             return "did not receive Early Intervention (EI)"
         return f"received Early Intervention (EI) starting at {self.base}"
 
@@ -281,21 +213,13 @@ class EarlyIntervention(Transformer[str]):
 class CPSE(Transformer[str]):
     """The transformer for CPSE."""
 
-    def matches(self) -> bool:
-        """Determines if the patient had CPSE.
-
-        Returns:
-            bool: True if the patient had CPSE.
-        """
-        return bool(self.base)
-
     def transform(self) -> str:
         """Transforms the CPSE information to a string.
 
         Returns:
             str: The transformed object.
         """
-        if not self.matches():
+        if self.base:
             return (
                 "did not receive Committee on Preschool Special Education (CPSE) "
                 "services"
@@ -304,3 +228,126 @@ class CPSE(Transformer[str]):
             "received Committee on Preschool Special Education (CPSE) services "
             f"starting at {self.base}"
         )
+
+
+class DevelopmentSkill(Transformer[str | int]):
+    """The transformer for developmental skills."""
+
+    def transform(self) -> str:
+        """Transforms the developmental skills information to a string.
+
+        Returns:
+            str: The transformed object.
+        """
+        if isinstance(self.base, int) or self.base.isnumeric():
+            return f"{self.other} at {self.base} months/years"
+        if self.base.lower() == "not yet":
+            return "has not {self.other}"
+        if self.base.lower() in ["normal", "late"]:
+            return f"{self.other} at a {self.base.lower()} age"
+        if self.base.lower() == "early":
+            return f"{self.other} at an early age"
+        return f"{self.other} at {self.base}"
+
+
+class PastDiagnoses(MultiTransformer[descriptors.PastDiagnosis]):
+    """The transformer for past diagnoses."""
+
+    def transform(self, *, short: bool = True) -> str:
+        """Transforms the past diagnoses information to a string.
+
+        Args:
+            short: Whether to use the short form of the string.
+
+        Returns:
+            str: The transformed object.
+        """
+        if len(self.base) == 0:
+            return "no prior history of psychiatric diagnoses"
+
+        if short:
+            return "a prior history of " + join_with_oxford_comma(
+                [val.diagnosis for val in self.base],
+            )
+
+        return (
+            "was diagnosed with the following psychiatric diagnoses: "
+            + join_with_oxford_comma(
+                [
+                    f"{val.diagnosis} at age {val.age} by {val.clinician}"
+                    for val in self.base
+                ],
+            )
+        )
+
+
+class FamilyDiagnoses(MultiTransformer[descriptors.FamilyPsychiatricHistory]):
+    """The transformer for family diagnoses."""
+
+    def transform(self) -> str:
+        """Transforms the family diagnoses information to a string.
+
+        Returns:
+            str: The transformed object.
+        """
+        no_past_diagnosis = [val for val in self.base if val.no_formal_diagnosis]
+        past_diagnosis = [val for val in self.base if not val.no_formal_diagnosis]
+
+        text = ""
+        if len(past_diagnosis) > 0:
+            text += "The following history of psychiatric diagnoses was reported: "
+            past_diagosis_texts = [
+                self._past_diagnosis_text(val) for val in past_diagnosis
+            ]
+            text += join_with_oxford_comma(past_diagosis_texts)
+            text += ". "
+
+        if len(no_past_diagnosis) > 0:
+            no_diagnosis_names = [val.diagnosis for val in no_past_diagnosis]
+            text += (
+                "Family history of the following diagnoses was denied: "
+                + join_with_oxford_comma(no_diagnosis_names)
+            )
+        return text
+
+    @staticmethod
+    def _past_diagnosis_text(diagnosis: descriptors.FamilyPsychiatricHistory) -> str:
+        """Transforms a family diagnosis to a string.
+
+        Args:
+            diagnosis: The family diagnosis.
+
+        Returns:
+            str: The transformed object.
+        """
+        if len(diagnosis.family_members) == 0:
+            return (
+                f"a formal diagnosis of {diagnosis.diagnosis}, "
+                "without any specified family members"
+            )
+
+        verb = "has" if len(diagnosis.family_members) == 1 else "have"
+        return (
+            f"the {join_with_oxford_comma(diagnosis.family_members)} "
+            f"{verb} a formal diagnosis of {diagnosis.diagnosis}"
+        )
+
+
+def join_with_oxford_comma(
+    items: list[str],
+) -> str:
+    """Joins a list of items with an Oxford comma.
+
+    Args:
+        items: The items to be joined.
+
+    Returns:
+        str: The joined string.
+    """
+    if len(items) == 0:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    if len(items) == 2:  # noqa: PLR2004
+        return f"{items[0]} and {items[1]}"
+    return f"{', '.join(items[:-1])}, and {items[-1]}"

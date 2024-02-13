@@ -3,7 +3,6 @@ import datetime
 import math
 from typing import Any
 
-import polars as pl
 import pytz
 
 from ctk_api.routers.file_conversion.intake import descriptors, transformers
@@ -60,9 +59,26 @@ class Patient:
         self._pronouns_other = patient_df["pronouns_other"]
         self.handedness = transformers.Handedness(patient_df["dominant_hand"])
 
+        self.referral = patient_df["referral2"]
+        self.concerns = patient_df["concern_current"]
+        self.concerns_start = str(patient_df["concerns_begin"])
+        self.desired_outcome = patient_df["outcome2"]
+
+        past_diagnoses = [
+            descriptors.PastDiagnosis(
+                diagnosis=patient_df[f"pastdx_{index}"],
+                clinician=patient_df[f"dx_name{index}"],
+                age=str(patient_df[f"age_{index}"]),
+            )
+            for index in range(1, 11)
+            if patient_df[f"pastdx_{index}"]
+        ]
+        self.past_diagnoses = transformers.PastDiagnoses(past_diagnoses)
+
         self.education = Education(patient_df)
         self.development = Development(patient_df)
         self.guardian = Guardian(patient_df)
+        self.family_psychiatric_history = FamilyPyshicatricHistory(patient_df)
 
     @property
     def full_name(self) -> str:
@@ -94,7 +110,7 @@ class Patient:
 class Guardian:
     """The model for a parent or guardian."""
 
-    def __init__(self, patient_df: pl.DataFrame) -> None:
+    def __init__(self, patient_df: dict[str, Any]) -> None:
         """Initializes the guardian.
 
         Args:
@@ -161,3 +177,43 @@ class Development:
             patient_df["ei_age"],
         )
         self.cpse_age = transformers.CPSE(patient_df["cpse_age"])
+        self.started_walking = transformers.DevelopmentSkill(
+            patient_df["skill6"],
+            other="started walking",
+        )
+        self.started_talking = transformers.DevelopmentSkill(
+            patient_df["skill16"],
+            other="started using meaningful words",
+        )
+        self.daytime_dryness = transformers.DevelopmentSkill(
+            patient_df["skill12"],
+            other="achieved daytime dryness",
+        )
+        self.nighttime_dryness = transformers.DevelopmentSkill(
+            patient_df["skill13"],
+            other="achieved nighttime dryness",
+        )
+
+
+class FamilyPyshicatricHistory:
+    """The model for the patient's psychiatric history."""
+
+    def __init__(self, patient_df: dict[str, Any]) -> None:
+        """Initializes the psychiatric history.
+
+        Args:
+            patient_df: The patient dataframe.
+        """
+        self.is_father_history_known = bool(patient_df["biohx_dad_other"])
+        self.is_mother_history_known = bool(patient_df["biohx_mom_other"])
+        family_diagnoses = [
+            descriptors.FamilyPsychiatricHistory(
+                diagnosis=diagnosis.name,
+                no_formal_diagnosis=bool(
+                    patient_df[f"{diagnosis.checkbox_abbreviation}___4"],
+                ),
+                family_members=patient_df[f"{diagnosis.text_abbreviation}_text"],
+            )
+            for diagnosis in descriptors.family_psychiatric_diagnoses
+        ]
+        self.family_diagnoses = transformers.FamilyDiagnoses(family_diagnoses)

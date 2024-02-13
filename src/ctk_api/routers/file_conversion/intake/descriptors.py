@@ -1,6 +1,8 @@
 """Contains descriptors of the columns of the REDCap intake form."""
 import enum
 
+import pydantic
+
 
 class Gender(enum.Enum):
     """The gender of the patient."""
@@ -17,8 +19,8 @@ class Pronouns(enum.Enum):
     """The pronouns of the patient."""
 
     he_him_his = 1
-    she_her_hers = 2
-    they_them_theirs = 3
+    she_her_her = 2
+    they_them_their = 3
     ze_zir_zirs = 4
     other = 5
 
@@ -105,3 +107,195 @@ class BirthComplications(enum.Enum):
     bedrest = 18
     other_illnesses = 19
     none_of_the_above = 20
+
+
+class PastDiagnosis(pydantic.BaseModel):
+    """The model for the patient's past diagnosis."""
+
+    diagnosis: str
+    clinician: str
+    age: str
+
+
+class FamilyDiagnosis(pydantic.BaseModel):
+    """The model for a family diagnosis."""
+
+    name: str
+    checkbox_abbreviation: str
+    text_abbreviation: str
+
+
+family_psychiatric_diagnoses = [
+    FamilyDiagnosis(
+        name="attention deficit hyperactivity disorder",
+        checkbox_abbreviation="adhd",
+        text_abbreviation="adhd",
+    ),
+    FamilyDiagnosis(
+        name="alcohol abuse",
+        checkbox_abbreviation="aa",
+        text_abbreviation="aa",
+    ),
+    FamilyDiagnosis(
+        name="autism",
+        checkbox_abbreviation="autism",
+        text_abbreviation="autism",
+    ),
+    FamilyDiagnosis(
+        name="bipolar disorder",
+        checkbox_abbreviation="bipolar",
+        text_abbreviation="bipolar",
+    ),
+    FamilyDiagnosis(
+        name="conduct disorder",
+        checkbox_abbreviation="conduct",
+        text_abbreviation="conduct",
+    ),
+    FamilyDiagnosis(
+        name="depression",
+        checkbox_abbreviation="depression",
+        text_abbreviation="depression",
+    ),
+    FamilyDiagnosis(
+        name="disruptive mood dysregulation disorder",
+        checkbox_abbreviation="dmdd",
+        text_abbreviation="dmdd",
+    ),
+    FamilyDiagnosis(
+        name="eating disorders",
+        checkbox_abbreviation="eating",
+        text_abbreviation="eating",
+    ),
+    FamilyDiagnosis(
+        name="enuresis/encopresis",
+        checkbox_abbreviation="enuresis_encopresis",
+        text_abbreviation="ee",
+    ),
+    FamilyDiagnosis(
+        name="excoriation",
+        checkbox_abbreviation="excoriation",
+        text_abbreviation="exco",
+    ),
+    FamilyDiagnosis(
+        name="gender dysphoria",
+        checkbox_abbreviation="gender",
+        text_abbreviation="gender",
+    ),
+    FamilyDiagnosis(
+        name="generalized anxiety disorder",
+        checkbox_abbreviation="gad",
+        text_abbreviation="genanx",
+    ),
+    FamilyDiagnosis(
+        name="intellectual disability",
+        checkbox_abbreviation="intellectual",
+        text_abbreviation="id",
+    ),
+    FamilyDiagnosis(
+        name="language disorder",
+        checkbox_abbreviation="language_disorder",
+        text_abbreviation="ld",
+    ),
+    FamilyDiagnosis(
+        name="OCD",
+        checkbox_abbreviation="ocd",
+        text_abbreviation="ocd",
+    ),
+    FamilyDiagnosis(
+        name="oppositional defiant disorder",
+        checkbox_abbreviation="odd",
+        text_abbreviation="odd",
+    ),
+    FamilyDiagnosis(
+        name="panic disorder",
+        checkbox_abbreviation="panic",
+        text_abbreviation="panic",
+    ),
+    FamilyDiagnosis(
+        name="personality disorder",
+        checkbox_abbreviation="personality",
+        text_abbreviation="personality",
+    ),
+    FamilyDiagnosis(
+        name="psychosis",
+        checkbox_abbreviation="psychosis",
+        text_abbreviation="psychosis",
+    ),
+    FamilyDiagnosis(
+        name="PTSD",
+        checkbox_abbreviation="ptsd",
+        text_abbreviation="ptsd",
+    ),
+    FamilyDiagnosis(
+        name="reactive attachment",
+        checkbox_abbreviation="rad",
+        text_abbreviation="rad",
+    ),
+    FamilyDiagnosis(
+        name="selective mutism",
+        checkbox_abbreviation="selective_mutism",
+        text_abbreviation="selective",
+    ),
+    FamilyDiagnosis(
+        name="separation anxiety",
+        checkbox_abbreviation="separation_anx",
+        text_abbreviation="sa",
+    ),
+    FamilyDiagnosis(
+        name="social anxiety",
+        checkbox_abbreviation="social_anx",
+        text_abbreviation="social",
+    ),
+    FamilyDiagnosis(
+        name="specific learning disorder, with impairment in mathematics",
+        checkbox_abbreviation="sld_math",
+        text_abbreviation="sldmath",
+    ),
+    FamilyDiagnosis(
+        name="specific learning disorder, with impairment in reading",
+        checkbox_abbreviation="sld_read",
+        text_abbreviation="sldread",
+    ),
+    FamilyDiagnosis(
+        name="specific learning disorder, with impairment in written expression",
+        checkbox_abbreviation="sld_write",
+        text_abbreviation="sldexp",
+    ),
+    FamilyDiagnosis(
+        name="specific phobias",
+        checkbox_abbreviation="phobias",
+        text_abbreviation="spho",
+    ),
+    FamilyDiagnosis(
+        name="substance abuse",
+        checkbox_abbreviation="substance",
+        text_abbreviation="suba",
+    ),
+    FamilyDiagnosis(
+        name="suicide",
+        checkbox_abbreviation="suicide",
+        text_abbreviation="suicide",
+    ),
+    FamilyDiagnosis(
+        name="tics/Tourette's",
+        checkbox_abbreviation="tic_tourette",
+        text_abbreviation="tt",
+    ),
+]
+
+
+class FamilyPsychiatricHistory(pydantic.BaseModel):
+    """The model for the patient's family psychiatric history."""
+
+    diagnosis: str
+    no_formal_diagnosis: bool
+    family_members: list[str]
+
+    @pydantic.validator("family_members")
+    def split_comma_separated_values(cls, value: str | list[str] | None) -> list[str]:  # noqa: N805
+        """Splits comma separated values."""
+        if isinstance(value, list):
+            return value
+        if value is None:
+            return []
+        return value.split(",")

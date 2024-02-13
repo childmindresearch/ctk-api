@@ -91,8 +91,14 @@ def _read_subject_row(
     subject_df = intake_df.filter(
         (intake_df["firstname"] == first_name) & (intake_df["lastname"] == last_name),
     )
-    if subject_df.height != 0:
+    if subject_df.height == 1:
         return subject_df
+
+    if subject_df.height > 1:
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Multiple subjects found.",
+        )
 
     raise fastapi.HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
