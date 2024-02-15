@@ -289,9 +289,9 @@ class FamilyPsychiatricHistory(pydantic.BaseModel):
 
     diagnosis: str
     no_formal_diagnosis: bool
-    family_members: list[str] | str | None
+    family_members: list[str]
 
-    @pydantic.validator("family_members")
+    @pydantic.validator("family_members", pre=True)
     def split_comma_separated_values(cls, value: str | list[str] | None) -> list[str]:  # noqa: N805
         """Splits comma separated values."""
         if isinstance(value, list):

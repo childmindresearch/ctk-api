@@ -339,7 +339,11 @@ class ReportWriter:
                 replacement,
             )
 
-        docx_utils.correct_they_conjugation(self.report_closing_statement)
+        document_corrector = docx_utils.DocumentCorrections(
+            self.report_closing_statement,
+            correct_they=self.intake.patient.pronouns[0] == "they",
+        )
+        document_corrector.correct()
 
         composer_obj = composer.Composer(self.report)
         composer_obj.append(self.report_closing_statement)

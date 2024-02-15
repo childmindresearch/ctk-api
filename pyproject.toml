@@ -25,7 +25,6 @@ polars = "^0.20.6"
 pytz = "^2023.4"
 docxcompose = "^1.4.0"
 spacy = "^3.7.2"
-nltk = "^3.8.1"
 mlconjug3 = "^3.11.0"
 
 [tool.poetry.group.dev.dependencies]

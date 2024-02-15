@@ -4,6 +4,7 @@ import logging
 from collections.abc import AsyncGenerator
 
 import fastapi
+from fastapi import responses
 from fastapi.middleware import cors
 
 from ctk_api.core import config, middleware
@@ -50,6 +51,17 @@ app = fastapi.FastAPI(
     lifespan=lifespan,
 )
 app.include_router(api_router)
+
+
+@app.get(
+    "/",
+    include_in_schema=False,
+    response_class=responses.RedirectResponse,
+)
+def redirect_to_docs() -> fastapi.responses.RedirectResponse:
+    """Redirects to the API documentation."""
+    return responses.RedirectResponse("/docs")
+
 
 logger.info("Adding middleware.")
 logger.debug("Adding CORS middleware.")

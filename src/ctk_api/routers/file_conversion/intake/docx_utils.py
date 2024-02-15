@@ -1,3 +1,4 @@
+"""Utilities for handling DOCX files."""
 import dataclasses
 import re
 
@@ -33,71 +34,135 @@ class SubjectVerbPair:
         return self.verb_token.idx, self.verb_token.idx + len(self.verb)
 
 
-def correct_they_conjugation(document: docx.Document) -> None:
-    """Corrects the conjugation of verbs associated with they.
+class DocumentCorrections:
+    """Corrects verb conjugations associated with 'they' in a Word document."""
 
-    Acts in-place on the document.
+    def __init__(
+        self,
+        document: docx.Document,
+        *,
+        correct_they: bool = True,
+        correct_capitalization: bool = True,
+    ) -> None:
+        """Initializes the corrector with a document.
 
-    Args:
-        document: The document to correct.
+        Args:
+            document: The docx document to correct.
+            correct_they: Whether to correct verb conjugations associated with 'they'.
+            correct_capitalization: Whether to correct the capitalization of the
+                first word.
+        """
+        self.document = document
+        self.replacer = DocxReplace(document)
+        self.conjugator = mlconjug3.Conjugator(language="en")
+        self.correct_they = correct_they
+        self.correct_capitalization = correct_capitalization
 
-    Notes:
-        See https://github.com/explosion/spaCy/blob/master/spacy/glossary.py
-        for a full list of word tags.
-    """
-    replacer = DocxReplace(document)
-    conjugator = mlconjug3.Conjugator(language="en")
+    def correct(self) -> None:
+        """Corrects verb conjugations associated with 'they' in the document."""
+        if not self.correct_they and not self.correct_capitalization:
+            return
 
-    for paragraph in document.paragraphs:
-        sentences = paragraph.text.split(".")
+        for paragraph in self.document.paragraphs:
+            self._correct_paragraph(paragraph)
+
+    def _correct_paragraph(self, paragraph: docx.text.paragraph.Paragraph) -> None:
+        """Corrects conjugations in a single paragraph.
+
+        Args:
+            paragraph: The paragraph to correct.
+        """
+        sentences = NLP(paragraph.text).sents
         for sentence in sentences:
-            words = sentence.split(" ")
-            lower_words = [word.lower() for word in words]
-            if "they" not in lower_words:
-                continue
-            subject_verb_pairs = _find_subject_verb(sentence)
-            subject_verb_they = [
-                pair for pair in subject_verb_pairs if "they" in pair.subject.lower()
-            ]
-            for pair in subject_verb_they:
-                for child in pair.verb_token.children:
-                    if child.tag_ == "VBZ":
-                        pair.verb_token = child
-                        break
-                if pair.verb_token.tag_ != "VBZ":
-                    continue
+            self._correct_sentence(sentence.text)
 
-                verb = conjugator.conjugate(pair.verb_token.lemma_)
-                conjugated_verb = verb["indicative"]["indicative present"]["they"]
-                new_sentence = (
-                    sentence[: pair.verb_indices[0]]
-                    + conjugated_verb
-                    + sentence[pair.verb_indices[1] :]
+    def _correct_sentence(self, sentence: str) -> None:
+        """Corrects the conjugation of verbs associated with they in a sentence.
+
+        Args:
+            sentence: The sentence to correct.
+        """
+        words = sentence.split(" ")
+        if "they" not in [word.lower() for word in words]:
+            return
+
+        subject_verb_pairs = self._find_subject_verb(sentence)
+        they_verb_pairs = [
+            pair for pair in subject_verb_pairs if pair.subject.lower() == "they"
+        ]
+
+        for pair in reversed(they_verb_pairs):
+            sentence = self._correct_verb_conjugation(sentence, pair)
+
+        if sentence[0].islower():
+            new_sentence = sentence[0].upper() + sentence[1:]
+            self.replacer.replace(sentence, new_sentence)
+
+    def _correct_verb_conjugation(
+        self,
+        sentence: str,
+        pair: SubjectVerbPair,
+    ) -> str:
+        """Corrects the verb conjugation associated with 'they' in a sentence.
+
+        Args:
+            sentence: The sentence to correct.
+            pair: The pair of subject and verb in the sentence.
+        """
+        for child in pair.verb_token.children:
+            if child.tag_ == "VBZ" and child.lemma_ in ["be", "have"]:
+                pair.verb_token = child
+            elif child.tag_ == "VBZ":
+                child_pair = SubjectVerbPair(
+                    sentence=sentence,
+                    subject_token=pair.subject_token,
+                    verb_token=child,
                 )
+                sentence = self._correct_verb_conjugation(sentence, child_pair)
+        if pair.verb_token.tag_ != "VBZ":
+            return sentence
 
-                replacer.replace(sentence, new_sentence)
+        verb = self.conjugator.conjugate(pair.verb_token.lemma_)
+        if isinstance(verb, list):
+            verb = verb[0]
+        try:
+            conjugated_verb = verb["indicative"]["indicative present"]["they"]  # type: ignore[index]
+        except TypeError as exc_info:
+            if "'NoneType' object is not subscriptable" in str(exc_info):
+                # Verb is unknown to the conjugator.
+                return sentence
+            raise
 
-
-def _find_subject_verb(sentence: str) -> list[tuple[int, int]]:
-    """Finds the subject and verb of a sentence, only if the subject.
-
-    Args:
-        sentence: The sentence to analyze.
-
-    Returns:
-        A list of indices of subjects and verbs
-    """
-    doc = NLP(sentence)
-    return [
-        SubjectVerbPair(
-            sentence=sentence,
-            subject_token=word,
-            verb_token=word.head,
+        new_sentence = (
+            sentence[: pair.verb_indices[0]]
+            + conjugated_verb
+            + sentence[pair.verb_indices[1] :]
         )
-        for word in doc
-        if word.dep in [symbols.nsubj, symbols.nsubjpass]
-        and word.head.tag_.startswith("VB")
-    ]
+
+        self.replacer.replace(sentence, new_sentence)
+        return new_sentence
+
+    @staticmethod
+    def _find_subject_verb(sentence: str) -> list[SubjectVerbPair]:
+        """Finds the subject and verb of a sentence, only if the subject.
+
+        Args:
+            sentence: The sentence to analyze.
+
+        Returns:
+            A list of indices of subjects and verbs
+        """
+        doc = NLP(sentence)
+        return [
+            SubjectVerbPair(
+                sentence=sentence,
+                subject_token=word,
+                verb_token=word.head,
+            )
+            for word in doc
+            if word.dep in [symbols.nsubj, symbols.nsubjpass]
+            and word.head.tag_.startswith("VB")
+        ]
 
 
 class DocxReplace:
@@ -118,6 +183,8 @@ class DocxReplace:
         Args:
             find: The text to find.
             replace: The text to replace.
+            capitalize: Whether to capitalize the replacement if it is the first
+                word of a sentence..
         """
         for paragraph in self.document.paragraphs:
             self._replace_in_section(paragraph, find, replace)
@@ -149,6 +216,8 @@ class DocxReplace:
             paragraph: The Word document's paragraph.
             find: The text to find.
             replace: The text to replace.
+            capitalize: Whether to capitalize the replacement if it is the first
+                word of a sentence.
 
         """
         if find not in paragraph.text:
