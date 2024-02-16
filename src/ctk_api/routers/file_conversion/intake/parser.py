@@ -106,6 +106,33 @@ class Patient:
             return self._pronouns_other.split("/")
         return self._pronouns_enum.split("_")
 
+    @property
+    def age_gender_label(self) -> str:
+        """Converts the gender and age to an appropriate string."""
+        child_age_cutoff = 15
+        upper_age_cutoff = 18
+
+        if self.age < child_age_cutoff:
+            return (
+                "girl"
+                if "female" in self.gender
+                else "boy"
+                if "male" in self.gender
+                else "child"
+            )
+
+        gender_string = (
+            "woman"
+            if "female" in self.gender
+            else "man"
+            if "male" in self.gender
+            else "adult"
+        )
+
+        if self.age < upper_age_cutoff:
+            return f"young {gender_string}"
+        return gender_string
+
 
 class Guardian:
     """The model for a parent or guardian."""

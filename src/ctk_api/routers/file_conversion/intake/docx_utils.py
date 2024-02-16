@@ -5,6 +5,9 @@ import re
 import docx
 import mlconjug3
 import spacy
+from docx import oxml, table
+from docx.oxml import ns
+from docx.text import paragraph as docx_paragraph
 from spacy import symbols, tokens
 
 NLP = spacy.load("en_core_web_sm")
@@ -108,6 +111,12 @@ class DocumentCorrections:
         Args:
             sentence: The sentence to correct.
             pair: The pair of subject and verb in the sentence.
+
+        Notes:
+            To my knowledge, 'to be' is the only verb that has a different
+            conjugation for third person singular/plural in the past tense. If
+            other verbs are found to have different conjugations in the past
+            tense, this function will need to be updated.
         """
         for child in pair.verb_token.children:
             if child.tag_ == "VBZ" and child.lemma_ in ["be", "have"]:
@@ -119,14 +128,19 @@ class DocumentCorrections:
                     verb_token=child,
                 )
                 sentence = self._correct_verb_conjugation(sentence, child_pair)
-        if pair.verb_token.tag_ != "VBZ":
+        if pair.verb_token.tag_ != "VBZ" and not (
+            pair.verb_token.tag_ == "VBD" and pair.verb_token.lemma_ == "be"
+        ):
             return sentence
 
         verb = self.conjugator.conjugate(pair.verb_token.lemma_)
         if isinstance(verb, list):
             verb = verb[0]
         try:
-            conjugated_verb = verb["indicative"]["indicative present"]["they"]  # type: ignore[index]
+            if pair.verb_token.tag_ == "VBZ":
+                conjugated_verb = verb["indicative"]["indicative present"]["they"]  # type: ignore[index]
+            else:
+                conjugated_verb = verb["indicative"]["indicative past tense"]["they"]  # type: ignore[index]
         except TypeError as exc_info:
             if "'NoneType' object is not subscriptable" in str(exc_info):
                 # Verb is unknown to the conjugator.
@@ -198,7 +212,7 @@ class DocxReplace:
 
     @staticmethod
     def _replace_in_section(
-        paragraph: docx.text.paragraph.Paragraph,
+        paragraph: docx_paragraph.Paragraph,
         find: str,
         replace: str,
     ) -> None:
@@ -256,3 +270,91 @@ class DocxReplace:
                     current_index += 1
 
                 break
+
+
+def format_paragraph(  # noqa: PLR0913
+    paragraph: docx_paragraph.Paragraph,
+    *,
+    line_spacing: float | None = None,
+    bold: bool | None = None,
+    italics: bool | None = None,
+    font_size: int | None = None,
+    font_rgb: tuple[int, int, int] | None = None,
+) -> None:
+    """Formats a paragraph in a Word document.
+
+    Args:
+        paragraph: The paragraph to format.
+        line_spacing: The line spacing of the paragraph.
+        bold: Whether to bold the paragraph.
+        italics: Whether to italicize the paragraph.
+        italics: Whether to italicize the paragraph.
+        font_size: The font size of the paragraph.
+        font_rgb: The font color of the paragraph.
+    """
+    if line_spacing is not None:
+        paragraph.paragraph_format.line_spacing = line_spacing
+
+    for run in paragraph.runs:
+        if bold is not None:
+            run.bold = bold
+        if italics is not None:
+            run.italic = italics
+        if font_size is not None:
+            run.font.size = font_size
+        if font_rgb is not None:
+            run.font.color.rgb = docx.shared.RGBColor(*font_rgb)
+
+
+def format_cell(  # noqa: PLR0913, D417
+    cell: table._Cell,
+    *,
+    line_spacing: float | None = None,
+    bold: bool | None = None,
+    italics: bool | None = None,
+    font_size: int | None = None,
+    font_rgb: tuple[int, int, int] | None = None,
+    background_rgb: tuple[int, int, int] | None = None,
+) -> None:
+    """Formats a cell in a Word table.
+
+    Args:
+        cell: The cell to format.
+        bold: Whether to bold the cell.
+        italics: Whether to italicize the cell.
+        font_size: The font size of the cell.
+        font_rgb: The font color of the cell.
+        background_rgb: The background color of the cell.
+    """
+    for para in cell.paragraphs:
+        format_paragraph(
+            para,
+            line_spacing=line_spacing,
+            bold=bold,
+            italics=italics,
+            font_size=font_size,
+            font_rgb=font_rgb,
+        )
+
+    if background_rgb is not None:
+        shading = oxml.parse_xml(
+            (r'<w:shd {} w:fill="' + f"{rgb_to_hex(*background_rgb)}" + r'"/>').format(
+                ns.nsdecls("w"),
+            ),
+        )
+
+        cell._tc.get_or_add_tcPr().append(shading)  # noqa: SLF001
+
+
+def rgb_to_hex(r: int, g: int, b: int) -> str:
+    """Converts RGB values to a hexadecimal color code.
+
+    Args:
+        r: The red component of the RGB color.
+        g: The green component of the RGB color.
+        b: The blue component of the RGB color.
+
+    Returns:
+        The hexadecimal color code representing the RGB color.
+    """
+    return f"#{r:02x}{g:02x}{b:02x}".upper()
