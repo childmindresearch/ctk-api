@@ -18,10 +18,10 @@ class Gender(enum.Enum):
 class Pronouns(enum.Enum):
     """The pronouns of the patient."""
 
-    he_him_his = 1
-    she_her_her = 2
-    they_them_their = 3
-    ze_zir_zirs = 4
+    he_him_his_his_himself = 1
+    she_her_her_hers_herself = 2
+    they_them_their_theirs_themselves = 3
+    ze_zir_zir_zirs_zirself = 4
     other = 5
 
 

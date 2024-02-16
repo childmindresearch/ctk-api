@@ -20,7 +20,7 @@ T = TypeVar("T")
 DATA_DIR = config.DATA_DIR
 RGB_INTAKE = (178, 161, 199)
 RGB_TESTING = (155, 187, 89)
-PLACEHOLDER = "_____________"
+PLACEHOLDER = "______"
 
 
 def write_with_rgb_text(
@@ -114,6 +114,7 @@ class ReportWriter:
             "pronoun_0": self.intake.patient.pronouns[0],
             "pronoun_1": self.intake.patient.pronouns[1],
             "pronoun_2": self.intake.patient.pronouns[2],
+            "pronoun_4": self.intake.patient.pronouns[4],
         }
 
         for template, replacement in replacements.items():
@@ -236,7 +237,7 @@ class ReportWriter:
 
         text = f"""
         {patient.preferred_name} has no history of previous psychoeducational
-        evaluations./{patient.preferred_name} was evaluated by XXX in 20XX.
+        evaluations./{patient.preferred_name} was evaluated by {PLACEHOLDER} in 20XX.
         Documentation of the results of the evaluation(s) were unavailable at
         the time of writing this report/ Notable results include:
         """
@@ -455,13 +456,14 @@ class ReportWriter:
         """Writes the clinical summary and impressions to the report."""
         patient = self.intake.patient
         gender = patient.age_gender_label
+        concerns = f'"{patient.concerns}"' if patient.concerns else PLACEHOLDER
 
         text = f"""
             {patient.preferred_name} is a
             sociable/resourceful/pleasant/hardworking/etc. {gender} who
             participated in the Healthy Brain Network research project through
             the Child Mind Institute in the interest of participating in
-            research/due to parental concerns regarding xxx.
+            research/due to parental concerns regarding {concerns}.
         """
         text = self._remove_whitespace(text)
 

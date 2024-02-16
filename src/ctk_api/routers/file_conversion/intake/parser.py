@@ -102,9 +102,18 @@ class Patient:
     @property
     def pronouns(self) -> list[str]:
         """The patient's pronouns."""
-        if self._pronouns_enum == "other":
-            return self._pronouns_other.split("/")
-        return self._pronouns_enum.split("_")
+        if self._pronouns_enum != "other":
+            return self._pronouns_enum.split("_")
+
+        pronouns = self._pronouns_other.split("/")
+        defaults = [
+            "he/she/they",
+            "him/her/them",
+            "his/her/their",
+            "his/hers/theirs",
+            "himself/herself/themselves",
+        ]
+        return pronouns + defaults[len(pronouns) :]
 
     @property
     def age_gender_label(self) -> str:
