@@ -281,6 +281,17 @@ class ReportWriter:
         """Writes the educational history to the report."""
         patient = self.intake.patient
         education = patient.education
+        has_iep = education.individualized_educational_program == "yes"
+        if has_iep:
+            iep_prior_text = f"""
+                {patient.preferred_name} was
+                granted an Individualized Education Program (IEP) in
+                {PLACEHOLDER} grade due to {PLACEHOLDER}
+                difficulties.
+            """
+        else:
+            iep_prior_text = f"""{patient.preferred_name} has never had a
+                              Individiaulized Education Program (IEP)."""
         if education.grade == 1:
             grade_superscript = "st"
         elif education.grade == 2:  # noqa: PLR2004
@@ -294,10 +305,7 @@ class ReportWriter:
             {patient.preferred_name} previously attended previous school names
             and grades. {patient.pronouns[0]} previously struggled
             with (provide details of academic challenges and behavioral
-            difficulties in school). {patient.preferred_name} was
-            granted an Individualized Education Program (IEP) in
-            {PLACEHOLDER} grade due to {PLACEHOLDER}
-            difficulties.
+            difficulties in school). {iep_prior_text}
         """
         texts_current = [
             f"""{patient.preferred_name} is currently in the {education.grade}""",
@@ -339,19 +347,19 @@ class ReportWriter:
             {patient.pronouns[2]} biological parents, brother/sister (age). The
             family is intact. [Indicate if parents are divorced and any split
             custody arrangements.] {patient.preferred_name}'s mother, MOTHER
-            FIRST AND LAST NAME (age), is a (occupation), and his/her father,
-            FATHER FIRST AND LAST NAME (age), is a (occupation).
-            {patient.preferred_name} has a positive relationship with
-            {patient.pronouns[2]} family members. English is the only language
-            spoken in the home.// The family maintains a bilingual household,
-            speaking English and {PLACEHOLDER}. English is reportedly
+            FIRST AND LAST NAME (age), is a (occupation), and
+            {patient.pronouns[2]} father, FATHER FIRST AND LAST NAME (age), is a
+            (occupation). {patient.preferred_name} has a positive relationship
+            with {patient.pronouns[2]} family members. English is the only
+            language spoken in the home.// The family maintains a bilingual
+            household, speaking English and {PLACEHOLDER}. English is reportedly
             {patient.preferred_name}'s preferred language.
             {patient.preferred_name}'s level of proficiency in {PLACEHOLDER} is
             (basic/conversant/proficient/fluent).
         """
 
         text_adaptive = f"""
-            {patient.guardian.full_name} denied any concerns with his/her
+            {patient.guardian.full_name} denied any concerns with {patient.pronouns[2]}
             functioning in the home setting// Per {patient.guardian.full_name},
             {patient.preferred_name} has a history of {PLACEHOLDER} (temper
             outbursts, oppositional behaviors, etc.) in the home setting. (Write
