@@ -12,7 +12,7 @@ from docxcompose import composer
 from fastapi import status
 
 from ctk_api.core import config
-from ctk_api.routers.file_conversion.intake import docx_utils, parser
+from ctk_api.routers.file_conversion.intake import parser, utils
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -73,7 +73,7 @@ def write_with_rgb_text(
             for paragraph in self.report.paragraphs[
                 n_paragraphs_before:n_paragraphs_after
             ]:
-                docx_utils.format_paragraph(
+                utils.format_paragraph(
                     paragraph,
                     font_rgb=rgb,
                 )
@@ -119,7 +119,7 @@ class ReportWriter:
 
         for template, replacement in replacements.items():
             template_formatted = "{{" + template.upper() + "}}"
-            docx_utils.DocxReplace(self.report).replace(template_formatted, replacement)
+            utils.DocxReplace(self.report).replace(template_formatted, replacement)
 
     @write_with_rgb_text(RGB_INTAKE)
     def write_reason_for_visit(self) -> None:
@@ -265,17 +265,23 @@ class ReportWriter:
         for i, header in enumerate(header_texts):
             header_row[i].text = header
             header_row[i].width = 10
-            docx_utils.format_cell(
+            utils.format_cell(
                 header_row[i],
                 bold=True,
                 font_rgb=RGB_INTAKE,
                 background_rgb=(217, 217, 217),
+                alignment=enum_text.WD_ALIGN_PARAGRAPH.CENTER,
             )
         for row in table.rows:
             row.height = 1
             row.height_rule = enum_table.WD_ROW_HEIGHT_RULE.EXACTLY
             for cell in row.cells:
-                docx_utils.format_cell(cell, line_spacing=1)
+                utils.format_cell(
+                    cell,
+                    line_spacing=1,
+                    spacing_after=0,
+                    spacing_before=0,
+                )
 
     def write_educational_history(self) -> None:
         """Writes the educational history to the report."""
@@ -290,16 +296,9 @@ class ReportWriter:
                 difficulties.
             """
         else:
-            iep_prior_text = f"""{patient.preferred_name} has never had a
-                              Individiaulized Education Program (IEP)."""
-        if education.grade == 1:
-            grade_superscript = "st"
-        elif education.grade == 2:  # noqa: PLR2004
-            grade_superscript = "nd"
-        elif education.grade == 3:  # noqa: PLR2004
-            grade_superscript = "rd"
-        else:
-            grade_superscript = "th"
+            iep_prior_text = f"""{patient.preferred_name} has never had an
+                              Individiualized Education Program (IEP)."""
+        grade_superscript = utils.rank_suffix(education.grade)
 
         text_prior = f"""
             {patient.preferred_name} previously attended previous school names
@@ -329,7 +328,7 @@ class ReportWriter:
         self.report.add_paragraph(text_prior)
         current_paragraph = self.report.add_paragraph(texts_current[0])
         current_paragraph.add_run(texts_current[1]).font.superscript = True
-        current_paragraph.add_run(texts_current[2])
+        current_paragraph.add_run(" " + texts_current[2])
 
     @write_with_rgb_text(RGB_INTAKE)
     def write_social_history(self) -> None:
@@ -341,21 +340,33 @@ class ReportWriter:
     def write_home_and_adaptive_functioning(self) -> None:
         """Writes the home and adaptive functioning to the report."""
         patient = self.intake.patient
+        household = patient.household
+        household_members = utils.join_with_oxford_comma(
+            [
+                (
+                    f"{member.relationship} ({member.age}y, "
+                    f"{member.grade_occupation.lower()}, "
+                    f"{member.relationship_quality} relationship)"
+                )
+                for member in household.members
+            ],
+        )
+        languages = utils.join_with_oxford_comma(household.languages)
+        proficiencies = utils.join_with_oxford_comma(
+            [
+                f"{language.fluency} in {language.name}"
+                for language in patient.languages
+            ],
+        )
 
         text_home = f"""
-            {patient.preferred_name} lives in City, N.Y., with
-            {patient.pronouns[2]} biological parents, brother/sister (age). The
-            family is intact. [Indicate if parents are divorced and any split
-            custody arrangements.] {patient.preferred_name}'s mother, MOTHER
-            FIRST AND LAST NAME (age), is a (occupation), and
-            {patient.pronouns[2]} father, FATHER FIRST AND LAST NAME (age), is a
-            (occupation). {patient.preferred_name} has a positive relationship
-            with {patient.pronouns[2]} family members. English is the only
-            language spoken in the home.// The family maintains a bilingual
-            household, speaking English and {PLACEHOLDER}. English is reportedly
+            {patient.preferred_name} lives in {household.city},
+            {household.state}, with {patient.pronouns[2]} {household_members}.
+            The parents/guardians are {household.guardian_marital_status}.
+            {languages} {"are" if len(household.languages) > 1 else "is"} spoken
+            at home. {patient.language_spoken_best} is reportedly
             {patient.preferred_name}'s preferred language.
-            {patient.preferred_name}'s level of proficiency in {PLACEHOLDER} is
-            (basic/conversant/proficient/fluent).
+            {patient.preferred_name}'s is {proficiencies}.
         """
 
         text_adaptive = f"""
@@ -519,7 +530,7 @@ class ReportWriter:
         to the called functions instead.
         """
         heading = self.report.add_heading("CURRENT PSYCHIATRIC FUNCTIONING", level=1)
-        docx_utils.format_paragraph(heading, font_rgb=RGB_INTAKE)
+        utils.format_paragraph(heading, font_rgb=RGB_INTAKE)
         self.write_current_psychiatric_medications_intake()
         self.write_current_psychiatric_medications_testing()
         self.write_denied_symptoms()
@@ -565,7 +576,7 @@ class ReportWriter:
         paragraph.add_run(texts[1])
         paragraph.runs[-1].bold = True
         paragraph.add_run(texts[2])
-        docx_utils.format_paragraph(paragraph, italics=True)
+        utils.format_paragraph(paragraph, italics=True)
 
     @write_with_rgb_text(RGB_TESTING)
     def write_denied_symptoms(self) -> None:
@@ -605,7 +616,7 @@ class ReportWriter:
 
     def apply_corrections(self) -> None:
         """Applies various grammatical and styling corrections."""
-        document_corrector = docx_utils.DocumentCorrections(
+        document_corrector = utils.DocumentCorrections(
             self.report,
             correct_they=self.intake.patient.pronouns[0] == "they",
             correct_capitalization=True,

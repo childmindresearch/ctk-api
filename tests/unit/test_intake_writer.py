@@ -3,7 +3,7 @@ import pathlib
 
 import docx
 
-from ctk_api.routers.file_conversion.intake import docx_utils
+from ctk_api.routers.file_conversion.intake import utils
 
 
 def test_find_replace_replaces_text(
@@ -11,7 +11,7 @@ def test_find_replace_replaces_text(
 ) -> None:
     """Tests finding and replacing text in a Word document."""
     document = docx.Document(data_dir / "find_replace_test.docx")
-    replace = docx_utils.DocxReplace(document)
+    replace = utils.DocxReplace(document)
 
     replace.replace("This is a header", "header_replace")
     replace.replace("This is a footer", "footer_replace")
@@ -37,7 +37,7 @@ def test_find_replace_maintains_style(
 ) -> None:
     """Tests finding and replacing text maintains the style."""
     document = docx.Document(data_dir / "find_replace_test.docx")
-    replace = docx_utils.DocxReplace(document)
+    replace = utils.DocxReplace(document)
 
     replace.replace("This is a header", "header_replace")
     replace.replace("This is a footer", "footer_replace")
@@ -58,7 +58,7 @@ def test_find_replace_maintains_custom_styling(
     Note: all lines in the test file start with a bolded word.
     """
     document = docx.Document(data_dir / "find_replace_test.docx")
-    replace = docx_utils.DocxReplace(document)
+    replace = utils.DocxReplace(document)
 
     replace.replace("This is a header", "header_replace")
     replace.replace("This is a footer", "footer_replace")
@@ -76,7 +76,7 @@ def test_find_replace_overflow(
 ) -> None:
     """Tests that find and replace does not remove additional text."""
     document = docx.Document(data_dir / "find_replace_test.docx")
-    replace = docx_utils.DocxReplace(document)
+    replace = utils.DocxReplace(document)
 
     replace.replace("This is a paragraph", "paragraph_replace")
 

@@ -109,6 +109,150 @@ class BirthComplications(enum.Enum):
     none_of_the_above = 20
 
 
+class GuardianMaritalStatus(enum.Enum):
+    """The marital status of the patient's guardian."""
+
+    married = 1
+    domestic_partnership = 2
+    separated = 3
+    divorced = 4
+    never_married = 5
+    widowed = 6
+
+
+class HouseholdRelationship(enum.Enum):
+    """The relationship of the patient to the head of the household."""
+
+    mother = 1
+    father = 2
+    brother = 3
+    sister = 4
+    half_brother = 5
+    half_sister = 6
+    step_sister = 7
+    step_brother = 8
+    grandmother = 9
+    grandfather = 10
+    stepfather = 11
+    stepmother = 12
+    uncle = 13
+    aunt = 14
+    cousin = 15
+    nephew = 16
+    niece = 17
+    friend = 18
+    other_relative = 19
+
+
+class RelationshipQuality(enum.Enum):
+    """The quality of the patient's relationship with a member of the household."""
+
+    excellent = 1
+    good = 2
+    fair = 3
+    poor = 4
+
+
+class USState(enum.Enum):
+    """The states of the United States of America."""
+
+    Alabama = 1
+    Alaska = 2
+    Arizona = 3
+    Arkansas = 4
+    California = 5
+    Colorado = 6
+    Connecticut = 7
+    Delaware = 8
+    Florida = 9
+    Georgia = 10
+    Hawaii = 11
+    Idaho = 12
+    Illinois = 13
+    Indiana = 14
+    Iowa = 15
+    Kansas = 16
+    Kentucky = 17
+    Louisiana = 18
+    Maine = 19
+    Maryland = 20
+    Massachusetts = 21
+    Michigan = 22
+    Minnesota = 23
+    Mississippi = 24
+    Missouri = 25
+    Montana = 26
+    Nebraska = 27
+    Nevada = 28
+    New_Hampshire = 29
+    New_Jersey = 30
+    New_Mexico = 31
+    New_York = 32
+    North_Carolina = 33
+    North_Dakota = 34
+    Ohio = 35
+    Oklahoma = 36
+    Oregon = 37
+    Pennsylvania = 38
+    Rhode_Island = 39
+    South_Carolina = 40
+    South_Dakota = 41
+    Tennessee = 42
+    Texas = 43
+    Utah = 44
+    Vermont = 45
+    Virginia = 46
+    Washington = 47
+    West_Virginia = 48
+    Wisconsin = 49
+    Wyoming = 50
+    District_of_Columbia = 51
+    American_Samoa = 52
+    Guam = 53
+    Northern_Mariana_Islands = 54
+    Puerto_Rico = 55
+    US_Virgin_Islands = 56
+
+
+class Language(enum.Enum):
+    """The languages spoken by the patient."""
+
+    English = 1
+    Spanish = 2
+    Chinese_Mandarin = 3
+    Chinese_Cantonese = 4
+    French = 5
+    Haitian_Creole = 6
+    Russian = 7
+    Hebrew = 8
+    German = 9
+    Italian = 10
+    American_Sign_Language = 11
+    Portuguese = 12
+    Arabic = 13
+    Bulgarian = 14
+    Farsi = 15
+    Hindi = 16
+    Hmong = 17
+    Khmer = 18
+    Polish = 19
+    Somalian = 20
+    Tagalog = 21
+    Thai = 22
+    Urdu = 23
+    Vietnamese = 24
+    other = 25
+
+
+class LanguageFluency(enum.Enum):
+    """The fluency of the patient in a language."""
+
+    basic = 1
+    conversational = 2
+    proficient = 3
+    fluent = 4
+
+
 class PastDiagnosis(pydantic.BaseModel):
     """The model for the patient's past diagnosis."""
 

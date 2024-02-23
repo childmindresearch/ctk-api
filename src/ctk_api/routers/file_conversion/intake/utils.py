@@ -1,4 +1,4 @@
-"""Utilities for handling DOCX files."""
+"""Utilities for the intake parser."""
 import dataclasses
 import re
 
@@ -6,6 +6,7 @@ import docx
 import mlconjug3
 import spacy
 from docx import oxml, table
+from docx.enum import text
 from docx.oxml import ns
 from docx.text import paragraph as docx_paragraph
 from spacy import symbols, tokens
@@ -276,24 +277,39 @@ def format_paragraph(  # noqa: PLR0913
     paragraph: docx_paragraph.Paragraph,
     *,
     line_spacing: float | None = None,
+    spacing_before: float | None = None,
+    spacing_after: float | None = None,
     bold: bool | None = None,
     italics: bool | None = None,
     font_size: int | None = None,
     font_rgb: tuple[int, int, int] | None = None,
+    alignment: text.WD_PARAGRAPH_ALIGNMENT | None = None,
 ) -> None:
     """Formats a paragraph in a Word document.
 
     Args:
         paragraph: The paragraph to format.
         line_spacing: The line spacing of the paragraph.
+        spacing_before: The spacing before the paragraph.
+        spacing_after: The spacing after the paragraph.
         bold: Whether to bold the paragraph.
         italics: Whether to italicize the paragraph.
         italics: Whether to italicize the paragraph.
         font_size: The font size of the paragraph.
         font_rgb: The font color of the paragraph.
+        alignment: The alignment of the paragraph.
     """
     if line_spacing is not None:
         paragraph.paragraph_format.line_spacing = line_spacing
+
+    if alignment is not None:
+        paragraph.alignment = alignment
+
+    if spacing_before is not None:
+        paragraph.paragraph_format.space_before = spacing_before
+
+    if spacing_after is not None:
+        paragraph.paragraph_format.space_after = spacing_after
 
     for run in paragraph.runs:
         if bold is not None:
@@ -310,16 +326,22 @@ def format_cell(  # noqa: PLR0913, D417
     cell: table._Cell,
     *,
     line_spacing: float | None = None,
+    spacing_before: float | None = None,
+    spacing_after: float | None = None,
     bold: bool | None = None,
     italics: bool | None = None,
     font_size: int | None = None,
     font_rgb: tuple[int, int, int] | None = None,
     background_rgb: tuple[int, int, int] | None = None,
+    alignment: text.WD_PARAGRAPH_ALIGNMENT | None = None,
 ) -> None:
     """Formats a cell in a Word table.
 
     Args:
         cell: The cell to format.
+        line_spacing: The line spacing of the cell.
+        spacing_before: The spacing before the cell.
+        spacing_after: The spacing after the cell.
         bold: Whether to bold the cell.
         italics: Whether to italicize the cell.
         font_size: The font size of the cell.
@@ -334,6 +356,9 @@ def format_cell(  # noqa: PLR0913, D417
             italics=italics,
             font_size=font_size,
             font_rgb=font_rgb,
+            alignment=alignment,
+            spacing_after=spacing_after,
+            spacing_before=spacing_before,
         )
 
     if background_rgb is not None:
@@ -358,3 +383,48 @@ def rgb_to_hex(r: int, g: int, b: int) -> str:
         The hexadecimal color code representing the RGB color.
     """
     return f"#{r:02x}{g:02x}{b:02x}".upper()
+
+
+def join_with_oxford_comma(
+    items: list[str],
+) -> str:
+    """Joins a list of items with an Oxford comma.
+
+    Args:
+        items: The items to be joined.
+
+    Returns:
+        str: The joined string.
+    """
+    if len(items) == 0:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    if len(items) == 2:  # noqa: PLR2004
+        return f"{items[0]} and {items[1]}"
+    return f"{', '.join(items[:-1])}, and {items[-1]}"
+
+
+def rank_suffix(number: int | str) -> str:
+    """Converts a number to its rank.
+
+    Args:
+        number: The number to convert.
+
+    Returns:
+        str: The rank of the number.
+    """
+    number = int(number)
+
+    last_two_digits = number % 100
+    if 11 <= last_two_digits <= 13:  # noqa: PLR2004
+        return "th"
+
+    last_digit = number % 10
+    if last_digit == 1:
+        return "st"
+    if last_digit == 2:  # noqa: PLR2004
+        return "nd"
+    if last_digit == 3:  # noqa: PLR2004
+        return "rd"
+    return "th"

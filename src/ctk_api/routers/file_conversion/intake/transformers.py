@@ -12,7 +12,7 @@ from typing import Generic, TypeVar
 import fastapi
 from fastapi import status
 
-from ctk_api.routers.file_conversion.intake import descriptors
+from ctk_api.routers.file_conversion.intake import descriptors, utils
 
 T = TypeVar("T")
 
@@ -266,19 +266,33 @@ class PastDiagnoses(MultiTransformer[descriptors.PastDiagnosis]):
             return "no prior history of psychiatric diagnoses"
 
         if short:
-            return "a prior history of " + join_with_oxford_comma(
+            return "a prior history of " + utils.join_with_oxford_comma(
                 [val.diagnosis for val in self.base],
             )
 
         return (
             "was diagnosed with the following psychiatric diagnoses: "
-            + join_with_oxford_comma(
+            + utils.join_with_oxford_comma(
                 [
                     f"{val.diagnosis} at age {val.age} by {val.clinician}"
                     for val in self.base
                 ],
             )
         )
+
+
+class HouseholdRelationship(Transformer[descriptors.HouseholdRelationship]):
+    """The transformer for household members."""
+
+    def transform(self) -> str:
+        """Transforms the household member information to a string.
+
+        Returns:
+            str: The transformed object.
+        """
+        if self.base == descriptors.HouseholdRelationship.other_relative:
+            return self.other if self.other else "unspecified relationship"
+        return self.base.name.replace("_", " ")
 
 
 class FamilyDiagnoses(MultiTransformer[descriptors.FamilyPsychiatricHistory]):
@@ -299,14 +313,14 @@ class FamilyDiagnoses(MultiTransformer[descriptors.FamilyPsychiatricHistory]):
             past_diagosis_texts = [
                 self._past_diagnosis_text(val) for val in past_diagnosis
             ]
-            text += join_with_oxford_comma(past_diagosis_texts)
+            text += utils.join_with_oxford_comma(past_diagosis_texts)
             text += ". "
 
         if len(no_past_diagnosis) > 0:
             no_diagnosis_names = [val.diagnosis for val in no_past_diagnosis]
             text += (
                 "Family history of the following diagnoses was denied: "
-                + join_with_oxford_comma(no_diagnosis_names)
+                + utils.join_with_oxford_comma(no_diagnosis_names)
             )
         return text
 
@@ -328,26 +342,6 @@ class FamilyDiagnoses(MultiTransformer[descriptors.FamilyPsychiatricHistory]):
 
         verb = "has" if len(diagnosis.family_members) == 1 else "have"
         return (
-            f"the {join_with_oxford_comma(diagnosis.family_members)} "
+            f"the {utils.join_with_oxford_comma(diagnosis.family_members)} "
             f"{verb} a formal diagnosis of {diagnosis.diagnosis}"
         )
-
-
-def join_with_oxford_comma(
-    items: list[str],
-) -> str:
-    """Joins a list of items with an Oxford comma.
-
-    Args:
-        items: The items to be joined.
-
-    Returns:
-        str: The joined string.
-    """
-    if len(items) == 0:
-        return ""
-    if len(items) == 1:
-        return items[0]
-    if len(items) == 2:  # noqa: PLR2004
-        return f"{items[0]} and {items[1]}"
-    return f"{', '.join(items[:-1])}, and {items[-1]}"
