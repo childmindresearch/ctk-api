@@ -7,6 +7,7 @@ be callable from the transform method alone, with the matches method being
 used internally.
 """
 import abc
+import dataclasses
 from typing import Generic, TypeVar
 
 import fastapi
@@ -90,7 +91,7 @@ class IndividualizedEducationProgram(
         Returns:
             str: The transformed object.
         """
-        if self.base == descriptors.IndividualizedEducationProgram.yes:
+        if self.base == descriptors.IndividualizedEducationProgram.no:
             return "did not have an Individualized Education Program (IEP)"
         return "had an Individualized Education Program (IEP)"
 
@@ -191,7 +192,7 @@ class Adaptability(Transformer[descriptors.Adaptability]):
         Returns:
             str: The transformed object.
         """
-        if self.base != descriptors.Adaptability.difficult:
+        if self.base == descriptors.Adaptability.difficult:
             return "a slow to warm up temperament"
         return "an adaptable temperament"
 
@@ -219,14 +220,42 @@ class CPSE(Transformer[str]):
         Returns:
             str: The transformed object.
         """
-        if self.base:
+        if not self.base:
             return (
                 "did not receive Committee on Preschool Special Education (CPSE) "
                 "services"
             )
         return (
             "received Committee on Preschool Special Education (CPSE) services "
-            f"starting at {self.base}"
+            f'starting at "{self.base}"'
+        )
+
+
+@dataclasses.dataclass
+class PastSchoolInterface:
+    """Interface for past school class.
+
+    Needed to prevent circular import from parsers.
+    """
+
+    name: str
+    grades: str
+
+
+class PastSchools(MultiTransformer[PastSchoolInterface]):
+    """The transformer for past schools."""
+
+    def transform(self) -> str:
+        """Transforms the past schools information to a string.
+
+        Returns:
+            str: The transformed object.
+        """
+        if len(self.base) == 0:
+            return "no prior history of schools"
+        substrings = [f"{val.name} (grades: {val.grades})" for val in self.base]
+        return "attended the following schools: " + utils.join_with_oxford_comma(
+            substrings,
         )
 
 
@@ -309,7 +338,7 @@ class FamilyDiagnoses(MultiTransformer[descriptors.FamilyPsychiatricHistory]):
 
         text = ""
         if len(past_diagnosis) > 0:
-            text += "The following history of psychiatric diagnoses was reported: "
+            text += "family history is significant for "
             past_diagosis_texts = [
                 self._past_diagnosis_text(val) for val in past_diagnosis
             ]
@@ -334,14 +363,52 @@ class FamilyDiagnoses(MultiTransformer[descriptors.FamilyPsychiatricHistory]):
         Returns:
             str: The transformed object.
         """
-        if len(diagnosis.family_members) == 0:
-            return (
-                f"a formal diagnosis of {diagnosis.diagnosis}, "
-                "without any specified family members"
-            )
+        family_members = utils.join_with_oxford_comma(diagnosis.family_members)
+        if family_members:
+            return f"{diagnosis.diagnosis} ({family_members})"
+        return diagnosis.diagnosis
 
-        verb = "has" if len(diagnosis.family_members) == 1 else "have"
-        return (
-            f"the {utils.join_with_oxford_comma(diagnosis.family_members)} "
-            f"{verb} a formal diagnosis of {diagnosis.diagnosis}"
-        )
+
+class ViolenceAndTrauma(Transformer[str]):
+    """Transformer for the violence and trauma information."""
+
+    def transform(self) -> str:
+        """Transforms the violence and trauma information to a string.
+
+        Returns:
+            str: The transformed object.
+        """
+        if not self.base:
+            return "denied any history of violence or trauma"
+        return f'reported that "{self.base}"'
+
+
+class AggressiveBehavior(Transformer[str]):
+    """Transformer for the aggressive behavior information."""
+
+    def transform(self) -> str:
+        """Transforms the aggressive behavior information to a string.
+
+        Returns:
+            str: The transformed object.
+        """
+        if not self.base:
+            return (
+                "denied any history of homicidality or severe physically aggressive "
+                "behaviors towards others."
+            )
+        return f'reported that "{self.base}"'
+
+
+class ChildrenServices(Transformer[str]):
+    """Transformer for the children services information."""
+
+    def transform(self) -> str:
+        """Transforms the children services information to a string.
+
+        Returns:
+            str: The transformed object.
+        """
+        if not self.base:
+            return "denied any history of ACS involvement."
+        return f'reported that "{self.base}"'

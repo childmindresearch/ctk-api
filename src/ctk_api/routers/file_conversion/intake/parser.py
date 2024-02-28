@@ -23,11 +23,7 @@ class IntakeInformation:
             patient_data: The patient dataframe.
             timezone: The timezone of the intake.
         """
-        self.patient = Patient(patient_data)
-        self.date_of_intake = datetime.datetime.strptime(
-            patient_data["date"],
-            "%m/%d/%y",
-        ).replace(tzinfo=pytz.timezone(timezone))
+        self.patient = Patient(patient_data, timezone=timezone)
         self.phone = patient_data["phone"]
 
 
@@ -64,16 +60,7 @@ class Patient:
         self.concerns_start = str(patient_data["concerns_begin"])
         self.desired_outcome = patient_data["outcome2"]
 
-        past_diagnoses = [
-            descriptors.PastDiagnosis(
-                diagnosis=patient_data[f"pastdx_{index}"],
-                clinician=patient_data[f"dx_name{index}"],
-                age=str(patient_data[f"age_{index}"]),
-            )
-            for index in range(1, 11)
-            if patient_data[f"pastdx_{index}"]
-        ]
-        self.past_diagnoses = transformers.PastDiagnoses(past_diagnoses)
+        self.psychiatric_history = PsychiatricHistory(patient_data)
 
         self.languages = [
             Language(patient_data, identifier)
@@ -89,7 +76,6 @@ class Patient:
         self.development = Development(patient_data)
         self.guardian = Guardian(patient_data)
         self.household = Household(patient_data)
-        self.family_psychiatric_history = FamilyPyshicatricHistory(patient_data)
 
     @property
     def full_name(self) -> str:
@@ -189,11 +175,12 @@ class Household:
             patient_data["guardian_maritalstatus"],
         ).name
         self.city = patient_data["city"]
-        self.state = descriptors.USState(patient_data["state"]).name
+
+        self.state = descriptors.USState(int(patient_data["state"])).name
         self.languages = [
             descriptors.Language(identifier).name
             for identifier in range(1, 25)
-            if patient_data[f"language___{identifier}"]
+            if patient_data[f"language___{identifier}"] == "1"
         ]
         if patient_data["language_other"]:
             self.languages.append(patient_data["language_other"])
@@ -267,6 +254,16 @@ class Education:
             )
         )
         self.school_type = descriptors.SchoolType(patient_data["schooltype"])
+        self.past_schools = transformers.PastSchools(
+            [
+                transformers.PastSchoolInterface(
+                    name=patient_data[f"pastschool{identifier}"],
+                    grades=patient_data[f"pastschool{identifier}_grades"],
+                )
+                for identifier in range(1, 11)
+                if patient_data[f"pastschool{identifier}"]
+            ],
+        )
 
 
 class Development:
@@ -288,7 +285,7 @@ class Development:
         pregnancy_symptoms = [
             index
             for index in range(1, len(descriptors.BirthComplications) + 1)
-            if patient_data[f"preg_symp___{index}"]
+            if patient_data[f"preg_symp___{index}"] == "1"
         ]
         self.birth_complications = transformers.BirthComplications(pregnancy_symptoms)
         self.premature_birth = bool(patient_data["premature"])
@@ -319,8 +316,46 @@ class Development:
         )
 
 
-class FamilyPyshicatricHistory:
+class PsychiatricHistory:
     """The parser for the patient's psychiatric history."""
+
+    def __init__(self, patient_data: dict[str, Any]) -> None:
+        """Initializes the psychiatric history.
+
+        Args:
+            patient_data: The patient dataframe.
+        """
+        past_diagnoses = [
+            descriptors.PastDiagnosis(
+                diagnosis=patient_data[f"pastdx_{index}"],
+                clinician=patient_data[f"dx_name{index}"],
+                age=str(patient_data[f"age_{index}"]),
+            )
+            for index in range(1, 11)
+            if patient_data[f"pastdx_{index}"]
+        ]
+        self.past_diagnoses = transformers.PastDiagnoses(past_diagnoses)
+        self.therapeutic_interventions = [
+            TherapeuticInterventions(patient_data, identifier)
+            for identifier in range(1, 11)
+            if patient_data[
+                f"txhx_{identifier}" if identifier != 2 else f"txhx{identifier}"  # noqa: PLR2004
+            ]
+        ]
+        self.aggresive_behaviors = transformers.AggressiveBehavior(
+            patient_data["agress_exp"],
+        )
+        self.children_services = transformers.ChildrenServices(
+            patient_data["acs_exp"],
+        )
+        self.family_psychiatric_history = FamilyPyshicatricHistory(patient_data)
+        self.violence_and_trauma = transformers.ViolenceAndTrauma(
+            patient_data["violence_exp"],
+        )
+
+
+class FamilyPyshicatricHistory:
+    """The parser for the patient's family's psychiatric history."""
 
     def __init__(self, patient_data: dict[str, Any]) -> None:
         """Initializes the psychiatric history.
@@ -333,11 +368,35 @@ class FamilyPyshicatricHistory:
         family_diagnoses = [
             descriptors.FamilyPsychiatricHistory(
                 diagnosis=diagnosis.name,
-                no_formal_diagnosis=bool(
-                    patient_data[f"{diagnosis.checkbox_abbreviation}___4"],
-                ),
+                no_formal_diagnosis=patient_data[
+                    f"{diagnosis.checkbox_abbreviation}___4"
+                ]
+                == "1",
                 family_members=patient_data[f"{diagnosis.text_abbreviation}_text"],
             )
             for diagnosis in descriptors.family_psychiatric_diagnoses
         ]
         self.family_diagnoses = transformers.FamilyDiagnoses(family_diagnoses)
+
+
+class TherapeuticInterventions:
+    """The parser for the patient's therapeutic history."""
+
+    def __init__(self, patient_data: dict[str, Any], identifier: int) -> None:
+        """Initializes the therapeutic history.
+
+        Args:
+            patient_data: The patient dataframe.
+            identifier: The id of the therapeutic history instance.
+        """
+        faulty_identifier = 2
+        if identifier != faulty_identifier:
+            self.therapist = patient_data[f"txhx_{identifier}"]
+        else:
+            self.therapist = patient_data[f"txhx{identifier}"]
+        self.reason = patient_data[f"txhx{identifier}_reason"]
+        self.start = patient_data[f"txhx{identifier}_start"]
+        self.end = patient_data[f"txhx{identifier}_end"]
+        self.frequency = patient_data[f"txhx{identifier}_freq"]
+        self.effectiveness = patient_data[f"txhx{identifier}_effectiveness"]
+        self.reason_ended = patient_data[f"txhx{identifier}_terminate"]

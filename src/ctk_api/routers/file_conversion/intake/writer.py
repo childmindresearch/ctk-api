@@ -1,5 +1,6 @@
 """Contains report writing functionality for intake information."""
 import functools
+import itertools
 import tempfile
 from collections.abc import Callable
 from typing import ParamSpec, TypeVar
@@ -103,13 +104,36 @@ class ReportWriter:
             DATA_DIR / "report_template_closing_statement.docx",
         )
 
+    def transform(self) -> None:
+        """Transforms the intake information to a report."""
+        self.write_reason_for_visit()
+        self.write_developmental_history()
+        self.write_academic_history()
+        self.write_social_history()
+        self.write_psychiatric_history()
+        self.write_medical_history()
+        self.write_current_psychiatric_functioning()
+        self.add_page_break()
+        self.write_mental_status_examination()
+        self.add_page_break()
+        self.report.add_heading(
+            "Insert List of Tests, Normal Curve and RA Text",
+            level=0,
+        )
+        self.add_page_break()
+        self.write_remaining_headers()
+        self.write_dsm_5_diagnoses()
+        self.write_recommendations()
+        self.write_closing_statement()
+        self.replace_patient_information()
+        self.apply_corrections()
+
     def replace_patient_information(self) -> None:
         """Replaces the patient information in the report."""
         replacements = {
             "full_name": self.intake.patient.full_name,
             "preferred_name": self.intake.patient.preferred_name,
             "date_of_birth": self.intake.patient.date_of_birth.strftime("%m/%d/%Y"),
-            "date_of_intake": self.intake.date_of_intake.strftime("%m/%d/%Y"),
             "reporting_guardian": self.intake.patient.guardian.full_name,
             "pronoun_0": self.intake.patient.pronouns[0],
             "pronoun_1": self.intake.patient.pronouns[1],
@@ -127,19 +151,24 @@ class ReportWriter:
         patient = self.intake.patient
         handedness = patient.handedness.transform()
         iep = patient.education.individualized_educational_program.transform()
-        past_diagnoses = patient.past_diagnoses.transform()
+        past_diagnoses = patient.psychiatric_history.past_diagnoses.transform()
         concerns = f'"{patient.concerns}"' if patient.concerns else PLACEHOLDER
         referral = f'"{patient.referral}"' if patient.referral else PLACEHOLDER
         desired_outcome = (
             f'"{patient.desired_outcome}"' if patient.desired_outcome else PLACEHOLDER
         )
+        grade_superscript = utils.rank_suffix(patient.education.grade)
 
-        text = f"""
+        texts = [
+            f"""
             At the time of enrollment, {patient.preferred_name} was a
             {patient.age}-year-old, {handedness} {patient.age_gender_label} with
             {past_diagnoses}. {patient.preferred_name} was placed in a
+            {patient.education.grade}""",
+            f"{grade_superscript} ",
+            f"""
             {patient.education.school_type.name} school grade
-            {patient.education.grade} classroom at
+             classroom at
             {patient.education.school_name}. {patient.preferred_name} {iep}.
             {patient.preferred_name} and {patient.pronouns[2]} mother/father,
             Mr./Ms./Mrs. {patient.guardian.first_name}
@@ -147,11 +176,14 @@ class ReportWriter:
             concerns regarding {concerns}. The family is hoping for
             {desired_outcome}. The family learned of the study through
             {referral}.
-        """
-        text = self._remove_whitespace(text)
+        """,
+        ]
+        texts = [self._remove_excess_whitespace(text) for text in texts]
 
         self.report.add_heading("REASON FOR VISIT", level=1)
-        self.report.add_paragraph(text)
+        paragraph = self.report.add_paragraph(texts[0])
+        paragraph.add_run(texts[1]).font.superscript = True
+        paragraph.add_run(" " + texts[2])
 
     @write_with_rgb_text(RGB_INTAKE)
     def write_developmental_history(self) -> None:
@@ -178,7 +210,7 @@ class ReportWriter:
             during infancy and was {development.soothing_difficulty.name} to
             soothe.
         """
-        text = self._remove_whitespace(text)
+        text = self._remove_excess_whitespace(text)
 
         self.report.add_heading("Prenatal and Birth History", level=2)
         self.report.add_paragraph(text)
@@ -199,7 +231,7 @@ class ReportWriter:
             {patient.pronouns[0].capitalize()} {daytime_dryness} and
             {nighttime_dryness}.
         """
-        text = self._remove_whitespace(text)
+        text = self._remove_excess_whitespace(text)
 
         self.report.add_heading("Developmental Milestones", level=2)
         self.report.add_paragraph(text)
@@ -217,7 +249,7 @@ class ReportWriter:
             {reporting_guardian} reported that
             {patient.preferred_name} {early_intervention} and {cpse}.
         """
-        text = self._remove_whitespace(text)
+        text = self._remove_excess_whitespace(text)
 
         self.report.add_heading("Early Educational Interventions", level=2)
         self.report.add_paragraph(text)
@@ -241,7 +273,7 @@ class ReportWriter:
         Documentation of the results of the evaluation(s) were unavailable at
         the time of writing this report/ Notable results include:
         """
-        text = self._remove_whitespace(text)
+        text = self._remove_excess_whitespace(text)
 
         self.report.add_heading("Previous Testing", level=2)
         self.report.add_paragraph(text)
@@ -299,12 +331,12 @@ class ReportWriter:
             iep_prior_text = f"""{patient.preferred_name} has never had an
                               Individiualized Education Program (IEP)."""
         grade_superscript = utils.rank_suffix(education.grade)
+        past_schools = education.past_schools.transform()
 
         text_prior = f"""
-            {patient.preferred_name} previously attended previous school names
-            and grades. {patient.pronouns[0]} previously struggled
-            with (provide details of academic challenges and behavioral
-            difficulties in school). {iep_prior_text}
+            {patient.preferred_name} {past_schools}. {patient.pronouns[0]}
+            previously struggled with (provide details of academic challenges
+            and behavioral difficulties in school). {iep_prior_text}
         """
         texts_current = [
             f"""{patient.preferred_name} is currently in the {education.grade}""",
@@ -321,8 +353,8 @@ class ReportWriter:
                 weaknesses in {PLACEHOLDER}.
             """,
         ]
-        text_prior = self._remove_whitespace(text_prior)
-        texts_current = [self._remove_whitespace(text) for text in texts_current]
+        text_prior = self._remove_excess_whitespace(text_prior)
+        texts_current = [self._remove_excess_whitespace(text) for text in texts_current]
 
         self.report.add_heading("Educational History", level=2)
         self.report.add_paragraph(text_prior)
@@ -351,22 +383,17 @@ class ReportWriter:
                 for member in household.members
             ],
         )
-        languages = utils.join_with_oxford_comma(household.languages)
-        proficiencies = utils.join_with_oxford_comma(
-            [
-                f"{language.fluency} in {language.name}"
-                for language in patient.languages
-            ],
-        )
+        language_fluencies = self._join_patient_languages()
 
         text_home = f"""
             {patient.preferred_name} lives in {household.city},
             {household.state}, with {patient.pronouns[2]} {household_members}.
             The parents/guardians are {household.guardian_marital_status}.
-            {languages} {"are" if len(household.languages) > 1 else "is"} spoken
-            at home. {patient.language_spoken_best} is reportedly
+            {utils.join_with_oxford_comma(household.languages)} {"are" if
+            len(household.languages) > 1 else "is"} spoken at home.
+            {patient.language_spoken_best} is reportedly
             {patient.preferred_name}'s preferred language.
-            {patient.preferred_name}'s is {proficiencies}.
+            {patient.preferred_name} {language_fluencies}.
         """
 
         text_adaptive = f"""
@@ -377,8 +404,8 @@ class ReportWriter:
             details of behavioral difficulties). (Also include any history of
             sleep difficulties, daily living skills, poor hygiene, etc.)
             """
-        text_home = self._remove_whitespace(text_home)
-        text_adaptive = self._remove_whitespace(text_adaptive)
+        text_home = self._remove_excess_whitespace(text_home)
+        text_adaptive = self._remove_excess_whitespace(text_adaptive)
 
         self.report.add_heading("Home and Adaptive Functioning", level=2)
         self.report.add_paragraph(text_home)
@@ -399,7 +426,7 @@ class ReportWriter:
             (positive/fair/poor) relationship with them.
             {patient.preferred_name}'s hobbies include {PLACEHOLDER}.
         """
-        text = self._remove_whitespace(text)
+        text = self._remove_excess_whitespace(text)
 
         self.report.add_heading("Social Functioning", level=2)
         self.report.add_paragraph(text)
@@ -410,31 +437,56 @@ class ReportWriter:
         self.report.add_heading("PSYCHRIATIC HISTORY", level=1)
         self.write_past_psychriatic_diagnoses()
         self.report.add_heading("Past Psychiatric Hospitalizations", level=2)
-        self.report.add_heading("Past Therapeutic Interventions", level=2)
-        self.report.add_heading(
-            "Past Self-Injurious Behaviors and Suicidality",
-            level=2,
-        )
-        self.report.add_heading(
-            "Past Severe Aggressive Behaviors and Homicidality",
-            level=2,
-        )
-        self.report.add_heading("Exposure to Violence and Trauma", level=2)
+        self.write_past_therapeutic_interventions()
+        self.write_past_self_injurious_behaviors_and_suicidality()
+        self.write_past_aggressive_behaviors_and_homicidality()
+        self.expose_to_violence_and_trauma()
+        self.administration_for_childrens_services_involvement()
+        self.write_family_psychiatric_history()
+
+    def administration_for_childrens_services_involvement(self) -> None:
+        """Writes the ACS involvement to the report."""
+        patient = self.intake.patient
+        acs = patient.psychiatric_history.children_services.transform()
+
+        text = f"""
+            {patient.guardian.full_name} {acs}.
+        """
+        text = self._remove_excess_whitespace(text)
+
         self.report.add_heading(
             "Administration for Children's Services (ACS) Involvement",
             level=2,
         )
-        self.write_family_psychiatric_history()
+        self.report.add_paragraph(text)
+
+    def write_past_aggressive_behaviors_and_homicidality(self) -> None:
+        """Writes the past aggressive behaviors and homicidality to the report."""
+        patient = self.intake.patient
+        history_violence = patient.psychiatric_history.aggresive_behaviors.transform()
+
+        text = f"""
+            {patient.guardian.full_name} {history_violence}.
+        """
+        text = self._remove_excess_whitespace(text)
+
+        self.report.add_heading(
+            "Past Severe Aggressive Behaviors and Homicidality",
+            level=2,
+        )
+        self.report.add_paragraph(text)
 
     def write_past_psychriatic_diagnoses(self) -> None:
         """Writes the past psychiatric diagnoses to the report."""
         patient = self.intake.patient
-        past_diagnoses = patient.past_diagnoses.transform(short=False)
+        past_diagnoses = patient.psychiatric_history.past_diagnoses.transform(
+            short=False,
+        )
 
         text = f"""
             {patient.preferred_name} {past_diagnoses}.
         """
-        text = self._remove_whitespace(text)
+        text = self._remove_excess_whitespace(text)
 
         self.report.add_heading("Past Psychiatric Diagnoses", level=2)
         self.report.add_paragraph(text)
@@ -443,15 +495,73 @@ class ReportWriter:
         """Writes the family psychiatric history to the report."""
         patient = self.intake.patient
         family_psychiatric_history = (
-            patient.family_psychiatric_history.family_diagnoses.transform()
+            patient.psychiatric_history.family_psychiatric_history
         )
+        diagnosis_text = family_psychiatric_history.family_diagnoses.transform()
 
         text = f"""
-            {family_psychiatric_history}
+            {patient.preferred_name}'s {diagnosis_text}
         """
-        text = self._remove_whitespace(text)
+        text = self._remove_excess_whitespace(text)
 
         self.report.add_heading("Family Psychiatric History", level=2)
+        self.report.add_paragraph(text)
+
+    def write_past_therapeutic_interventions(self) -> None:
+        """Writes the past therapeutic history to the report."""
+        patient = self.intake.patient
+        guardian = patient.guardian
+        interventions = patient.psychiatric_history.therapeutic_interventions
+
+        if not interventions:
+            texts = [
+                f"""
+                    {patient.guardian.full_name} denied any history of therapeutic
+                    interventions.
+                """,
+            ]
+        else:
+            texts = [
+                f"""
+                    From {intervention.start}-{intervention.end},
+                    {patient.preferred_name} engaged in therapy with
+                    {intervention.therapist} due to "{intervention.reason}" at a
+                    frequency of {intervention.frequency}. {guardian.full_name}
+                    described the treatment as "{intervention.effectiveness}".
+                    Treatment was ended due to "{intervention.reason_ended}".
+                    """
+                for intervention in interventions
+            ]
+
+        texts = [self._remove_excess_whitespace(text) for text in texts]
+
+        self.report.add_heading("Past Therapeutic Interventions", level=2)
+        for text in texts:
+            self.report.add_paragraph(text)
+
+    def write_past_self_injurious_behaviors_and_suicidality(self) -> None:
+        """Writes the past self-injurious behaviors and suicidality to the report."""
+        patient = self.intake.patient
+
+        text = f"""
+            {patient.guardian.full_name} denied any history of serious self-injurious
+            harm or suicidal ideation for {patient.preferred_name}.
+        """
+        text = self._remove_excess_whitespace(text)
+        self.report.add_heading(
+            "Past Self-Injurious Behaviors and Suicidality",
+            level=2,
+        )
+        self.report.add_paragraph(text)
+
+    def expose_to_violence_and_trauma(self) -> None:
+        """Writes the exposure to violence and trauma to the report."""
+        patient = self.intake.patient
+        history = patient.psychiatric_history.violence_and_trauma.transform()
+
+        text = f"{patient.guardian.full_name} {history}."
+
+        self.report.add_heading("Exposure to Violence and Trauma", level=2)
         self.report.add_paragraph(text)
 
     @write_with_rgb_text(RGB_INTAKE)
@@ -468,7 +578,7 @@ class ReportWriter:
             hearing device. {patient.guardian.full_name} denied any history of
             seizures, head trauma, migraines, meningitis or encephalitis.
         """
-        text = self._remove_whitespace(text)
+        text = self._remove_excess_whitespace(text)
 
     @write_with_rgb_text(RGB_TESTING)
     def write_clinical_summary_and_impressions(self) -> None:
@@ -484,7 +594,7 @@ class ReportWriter:
             the Child Mind Institute in the interest of participating in
             research/due to parental concerns regarding {concerns}.
         """
-        text = self._remove_whitespace(text)
+        text = self._remove_excess_whitespace(text)
 
         self.report.add_heading("CLINICAL SUMMARY AND IMPRESSIONS", level=1)
         self.report.add_paragraph(text)
@@ -496,7 +606,7 @@ class ReportWriter:
             Based on the results of the evaluation, the following recommendations are
             provided:
         """
-        text = self._remove_whitespace(text)
+        text = self._remove_excess_whitespace(text)
 
         self.report.add_heading("RECOMMENDATIONS", level=1)
         self.report.add_paragraph(text)
@@ -545,7 +655,7 @@ class ReportWriter:
         being treated by Doctortype, DoctorName, monthly/weekly/biweekly. The
         medication has been ineffective/effective.
         """
-        text = self._remove_whitespace(text)
+        text = self._remove_excess_whitespace(text)
 
         self.report.add_heading("Current Psychiatric Medications", level=2)
         self.report.add_paragraph(text)
@@ -570,7 +680,7 @@ class ReportWriter:
         tantrums…).
         """,
         ]
-        texts = [self._remove_whitespace(text) for text in texts]
+        texts = [self._remove_excess_whitespace(text) for text in texts]
 
         paragraph = self.report.add_paragraph(texts[0])
         paragraph.add_run(texts[1])
@@ -589,7 +699,7 @@ class ReportWriter:
         tics, inattention/hyperactivity, enuresis/encopresis, trauma, sleep,
         panic, anxiety or obsessive-compulsive disorders.
         """
-        text = self._remove_whitespace(text)
+        text = self._remove_excess_whitespace(text)
 
         self.report.add_paragraph(text)
 
@@ -623,36 +733,42 @@ class ReportWriter:
         )
         document_corrector.correct()
 
-    def transform(self) -> None:
-        """Transforms the intake information to a report."""
-        self.write_reason_for_visit()
-        self.write_developmental_history()
-        self.write_academic_history()
-        self.write_social_history()
-        self.write_psychiatric_history()
-        self.write_medical_history()
-        self.write_current_psychiatric_functioning()
-        self.add_page_break()
-        self.write_mental_status_examination()
-        self.add_page_break()
-        self.report.add_heading(
-            "Insert List of Tests, Normal Curve and RA Text",
-            level=0,
-        )
-        self.add_page_break()
-        self.write_remaining_headers()
-        self.write_dsm_5_diagnoses()
-        self.write_recommendations()
-        self.write_closing_statement()
-        self.replace_patient_information()
-        self.apply_corrections()
-
     def add_page_break(self) -> None:
         """Adds a page break to the report."""
         run = self.report.paragraphs[-1].add_run()
         run.add_break(enum_text.WD_BREAK.PAGE)
 
     @staticmethod
-    def _remove_whitespace(text: str) -> str:
+    def _remove_excess_whitespace(text: str) -> str:
         """Removes excess whitespace from a string."""
         return " ".join(text.split())
+
+    def _join_patient_languages(self) -> str:
+        """Joins the patient's languages."""
+        fluency_groups = itertools.groupby(
+            self.intake.patient.languages,
+            key=lambda language: language.fluency,
+        )
+        fluency_dict = {
+            fluency: [language.name for language in language_group]
+            for fluency, language_group in fluency_groups
+        }
+
+        language_description = ""
+        for fluency in ("fluent", "proficient", "conversational", "basic"):
+            if fluency not in fluency_dict:
+                continue
+
+            if not language_description and fluency != "basic":
+                language_description += " is "
+
+            if fluency != "basic":
+                language_description += f" {fluency} in "
+            else:
+                language_description += " has basic skills in "
+
+            language_description += (
+                f"{utils.join_with_oxford_comma(fluency_dict[fluency])}"
+            )
+
+        return language_description

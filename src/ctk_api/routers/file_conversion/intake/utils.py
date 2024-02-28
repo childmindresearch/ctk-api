@@ -428,3 +428,43 @@ def rank_suffix(number: int | str) -> str:
     if last_digit == 3:  # noqa: PLR2004
         return "rd"
     return "th"
+
+
+def string_to_int(string: str) -> int:
+    """Converts a string to an integer.
+
+    Removes all non-numeric characters from the string before converting it to an
+    integer.
+
+    Args:
+        string: The string to convert.
+
+    Returns:
+        int: The integer representation of the string.
+    """
+    no_decimal = string.split(".")[0]
+    value = int("".join(filter(str.isdigit, no_decimal)))
+    if no_decimal.startswith("-"):
+        value *= -1
+    return value
+
+
+def string_to_float(string: str) -> float:
+    """Converts a string to a float.
+
+    Removes all non-numeric characters from the string before converting it to a
+    float.
+
+    Args:
+        string: The string to convert.
+
+    Returns:
+        float: The float representation of the string.
+    """
+    no_second_period = ".".join(string.split(".")[:2])
+    value = float(
+        "".join(filter(lambda x: x.isdigit() or x == ".", no_second_period)),
+    )
+    if no_second_period.startswith("-"):
+        value *= -1
+    return value

@@ -7,22 +7,22 @@ import pydantic
 class Gender(enum.Enum):
     """The gender of the patient."""
 
-    male = 1
-    female = 2
-    non_binary = 3
-    transgender_male = 4
-    transgender_female = 5
-    other = 6
+    male = 0
+    female = 1
+    non_binary = 2
+    transgender_male = 3
+    transgender_female = 4
+    other = 5
 
 
 class Pronouns(enum.Enum):
     """The pronouns of the patient."""
 
-    he_him_his_his_himself = 1
-    she_her_her_hers_herself = 2
-    they_them_their_theirs_themselves = 3
-    ze_zir_zir_zirs_zirself = 4
-    other = 5
+    he_him_his_his_himself = 0
+    she_her_her_hers_herself = 1
+    they_them_their_theirs_themselves = 2
+    ze_zir_zir_zirs_zirself = 3
+    other = 4
 
 
 class Handedness(enum.Enum):
@@ -439,7 +439,7 @@ class FamilyPsychiatricHistory(pydantic.BaseModel):
     def split_comma_separated_values(cls, value: str | list[str] | None) -> list[str]:  # noqa: N805
         """Splits comma separated values."""
         if isinstance(value, list):
-            return value
+            return [string.lower() for string in value]
         if value is None:
             return []
-        return value.split(",")
+        return value.lower().split(",")
