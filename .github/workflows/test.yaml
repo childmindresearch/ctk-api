@@ -42,7 +42,7 @@ jobs:
       run: |
         poetry install
         poetry run python -c "import pypandoc; pypandoc.download_pandoc()"
-        python -m spacy download en_core_web_sm
+        poetry run python -m spacy download en_core_web_sm
     - name: Run tests
       id: run-tests
       run: >
