@@ -10,7 +10,7 @@ import yaml
 from fastapi import responses, status
 from sqlalchemy import orm
 
-from ctk_api.core import config, utils
+from ctk_api.core import config, core_utils
 from ctk_api.routers.summarization import anonymizer, models, schemas
 
 settings = config.get_settings()
@@ -75,7 +75,7 @@ async def summarize_report(
     )
 
     if existing_document:
-        return utils.markdown_text_as_docx_response(
+        return core_utils.markdown_text_as_docx_response(
             existing_document.summary_text,
             background_tasks,
             status.HTTP_200_OK,
@@ -110,7 +110,7 @@ async def summarize_report(
     session.add(summary)
     session.commit()
 
-    return utils.markdown_text_as_docx_response(
+    return core_utils.markdown_text_as_docx_response(
         response_text,
         background_tasks,
         status.HTTP_201_CREATED,

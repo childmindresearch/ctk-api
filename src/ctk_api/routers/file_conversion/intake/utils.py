@@ -3,12 +3,15 @@ import dataclasses
 import re
 
 import docx
+import fastapi
 import mlconjug3
+import polars as pl
 import spacy
 from docx import oxml, table
 from docx.enum import text
 from docx.oxml import ns
 from docx.text import paragraph as docx_paragraph
+from fastapi import status
 from spacy import symbols, tokens
 
 NLP = spacy.load("en_core_web_sm")
@@ -428,3 +431,74 @@ def ordinal_suffix(number: int | str) -> str:
     if last_digit == 3:  # noqa: PLR2004
         return "rd"
     return "th"
+
+
+def read_subject_row(
+    csv_file: fastapi.UploadFile,
+    redcap_survey_identifier: int,
+) -> pl.DataFrame:
+    """Reads the subject row from the intake CSV file.
+
+    All variables are interpreted as strings unless explicitly specified otherwise as
+    the REDCap .csv is too inconsistent in its typing.
+
+    Args:
+        csv_file: The intake CSV file.
+        redcap_survey_identifier: The REDCap survey identifier for the intake form.
+
+    Returns:
+        The subject row.
+
+    Raises:
+        HTTPException: If the subject is not found.
+    """
+    dtypes = {
+        "age": pl.Float32,
+        "birth_location": pl.Int8,
+        "child_language1_fluency": pl.Int8,
+        "child_language2_fluency": pl.Int8,
+        "child_language3_fluency": pl.Int8,
+        "childgender": pl.Int8,
+        "dominant_hand": pl.Int8,
+        "guardian_maritalstatus": pl.Int8,
+        "guardian_relationship___1": pl.Int8,
+        "iep": pl.Int8,
+        "infanttemp_adapt": pl.Int8,
+        "infanttemp1": pl.Int8,
+        "language_spoken": pl.Int8,
+        "opt_delivery": pl.Int8,
+        "residing_number": pl.Int8,
+        "pronouns": pl.Int8,
+        "schooltype": pl.Int8,
+    }
+
+    faulty_people_in_home = 2
+    for index in range(1, 11):
+        dtypes[f"peopleinhome{index}_relation"] = pl.Int8
+        if index != faulty_people_in_home:
+            dtypes[f"peopleinhome{index}_relationship"] = pl.Int8
+        else:
+            dtypes["peopleinhome_relationship"] = pl.Int8
+
+    intake_df = pl.read_csv(
+        csv_file.file,
+        infer_schema_length=0,
+        dtypes=dtypes,
+    )
+
+    subject_df = intake_df.filter(
+        intake_df["redcap_survey_identifier"] == redcap_survey_identifier,
+    )
+    if subject_df.height == 1:
+        return subject_df
+
+    if subject_df.height > 1:
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Multiple patients found.",
+        )
+
+    raise fastapi.HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Patient not found.",
+    )
