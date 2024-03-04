@@ -170,12 +170,12 @@ class ReportWriter:
             {patient.education.school_type.name} school grade
              classroom at
             {patient.education.school_name}. {patient.preferred_name} {iep}.
-            {patient.preferred_name} and {patient.pronouns[2]} mother/father,
-            Mr./Ms./Mrs. {patient.guardian.first_name}
-            {patient.guardian.last_name}, attended the present evaluation due to
-            concerns regarding {concerns}. The family is hoping for
-            {desired_outcome}. The family learned of the study through
-            {referral}.
+            {patient.preferred_name} and {patient.pronouns[2]}
+            {patient.guardian.relationship}, Mr./Ms./Mrs.
+            {patient.guardian.first_name} {patient.guardian.last_name}, attended
+            the present evaluation due to concerns regarding {concerns}. The
+            family is hoping for {desired_outcome}. The family learned of the
+            study through {referral}.
         """,
         ]
         texts = [self._remove_excess_whitespace(text) for text in texts]
@@ -436,7 +436,7 @@ class ReportWriter:
         """Writes the psychiatric history to the end of the report."""
         self.report.add_heading("PSYCHRIATIC HISTORY", level=1)
         self.write_past_psychriatic_diagnoses()
-        self.report.add_heading("Past Psychiatric Hospitalizations", level=2)
+        self.write_past_psychiatric_hospitalizations()
         self.write_past_therapeutic_interventions()
         self.write_past_self_injurious_behaviors_and_suicidality()
         self.write_past_aggressive_behaviors_and_homicidality()
@@ -444,14 +444,23 @@ class ReportWriter:
         self.administration_for_childrens_services_involvement()
         self.write_family_psychiatric_history()
 
+    def write_past_psychiatric_hospitalizations(self) -> None:
+        """Writes the past psychiatric hospitalizations to the report."""
+        patient = self.intake.patient
+        text = f"""
+            {patient.guardian.full_name} denied any history of past psychiatric
+            hospitalizations for {patient.preferred_name}.
+        """
+        text = self._remove_excess_whitespace(text)
+
+        self.report.add_heading("Past Psychiatric Hospitalizations", level=2)
+        self.report.add_paragraph(text)
+
     def administration_for_childrens_services_involvement(self) -> None:
         """Writes the ACS involvement to the report."""
         patient = self.intake.patient
-        acs = patient.psychiatric_history.children_services.transform()
 
-        text = f"""
-            {patient.guardian.full_name} {acs}.
-        """
+        text = patient.psychiatric_history.children_services.transform()
         text = self._remove_excess_whitespace(text)
 
         self.report.add_heading(
@@ -463,11 +472,8 @@ class ReportWriter:
     def write_past_aggressive_behaviors_and_homicidality(self) -> None:
         """Writes the past aggressive behaviors and homicidality to the report."""
         patient = self.intake.patient
-        history_violence = patient.psychiatric_history.aggresive_behaviors.transform()
 
-        text = f"""
-            {patient.guardian.full_name} {history_violence}.
-        """
+        text = patient.psychiatric_history.aggresive_behaviors.transform()
         text = self._remove_excess_whitespace(text)
 
         self.report.add_heading(
@@ -543,11 +549,9 @@ class ReportWriter:
         """Writes the past self-injurious behaviors and suicidality to the report."""
         patient = self.intake.patient
 
-        text = f"""
-            {patient.guardian.full_name} denied any history of serious self-injurious
-            harm or suicidal ideation for {patient.preferred_name}.
-        """
+        text = patient.psychiatric_history.self_harm.transform()
         text = self._remove_excess_whitespace(text)
+
         self.report.add_heading(
             "Past Self-Injurious Behaviors and Suicidality",
             level=2,
@@ -557,9 +561,9 @@ class ReportWriter:
     def expose_to_violence_and_trauma(self) -> None:
         """Writes the exposure to violence and trauma to the report."""
         patient = self.intake.patient
-        history = patient.psychiatric_history.violence_and_trauma.transform()
 
-        text = f"{patient.guardian.full_name} {history}."
+        text = patient.psychiatric_history.violence_and_trauma.transform()
+        text = self._remove_excess_whitespace(text)
 
         self.report.add_heading("Exposure to Violence and Trauma", level=2)
         self.report.add_paragraph(text)

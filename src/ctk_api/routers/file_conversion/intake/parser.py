@@ -151,6 +151,11 @@ class Guardian:
         """
         self.first_name = patient_data["guardian_first_name"]
         self.last_name = patient_data["guardian_last_name"]
+        relationship_id = patient_data["guardian_relationship___1"]
+        if relationship_id == descriptors.GuardianRelationship.other.value:
+            self.relationship = patient_data["other_relation"]
+        else:
+            self.relationship = descriptors.GuardianRelationship(relationship_id).name
 
     @property
     def full_name(self) -> str:
@@ -329,7 +334,7 @@ class PsychiatricHistory:
             descriptors.PastDiagnosis(
                 diagnosis=patient_data[f"pastdx_{index}"],
                 clinician=patient_data[f"dx_name{index}"],
-                age=str(patient_data[f"age_{index}"]),
+                date=str(patient_data[f"age_{index}"]),
             )
             for index in range(1, 11)
             if patient_data[f"pastdx_{index}"]
@@ -352,6 +357,7 @@ class PsychiatricHistory:
         self.violence_and_trauma = transformers.ViolenceAndTrauma(
             patient_data["violence_exp"],
         )
+        self.self_harm = transformers.SelfHarm(patient_data["selfharm_exp"])
 
 
 class FamilyPyshicatricHistory:

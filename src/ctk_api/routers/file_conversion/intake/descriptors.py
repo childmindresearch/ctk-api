@@ -25,6 +25,23 @@ class Pronouns(enum.Enum):
     other = 4
 
 
+class GuardianRelationship(enum.Enum):
+    """The relationship of the guardian to the patient."""
+
+    biological_mother = 0
+    biological_father = 1
+    grandparent = 2
+    aunt = 3
+    uncle = 4
+    foster_father = 5
+    foster_mother = 6
+    adoptive_father = 7
+    adoptive_mother = 8
+    state_or_foster_care_representative = 9
+    gestational_carrier = 10
+    other = 11
+
+
 class Handedness(enum.Enum):
     """The dominant hand of the patient."""
 
@@ -258,7 +275,7 @@ class PastDiagnosis(pydantic.BaseModel):
 
     diagnosis: str
     clinician: str
-    age: str
+    date: str
 
 
 class FamilyDiagnosis(pydantic.BaseModel):

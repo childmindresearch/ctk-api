@@ -8,6 +8,7 @@ used internally.
 """
 import abc
 import dataclasses
+import enum
 from typing import Generic, TypeVar
 
 import fastapi
@@ -16,6 +17,13 @@ from fastapi import status
 from ctk_api.routers.file_conversion.intake import descriptors, utils
 
 T = TypeVar("T")
+
+
+class ReplacementTags(str, enum.Enum):
+    """These tags will be replaced with the actual values in the final report."""
+
+    PREFERRED_NAME = "{{PREFERRED_NAME}}"
+    REPORTING_GUARDIAN = "{{REPORTING_GUARDIAN}}"
 
 
 class Transformer(Generic[T], abc.ABC):
@@ -303,7 +311,7 @@ class PastDiagnoses(MultiTransformer[descriptors.PastDiagnosis]):
             "was diagnosed with the following psychiatric diagnoses: "
             + utils.join_with_oxford_comma(
                 [
-                    f"{val.diagnosis} at age {val.age} by {val.clinician}"
+                    f"{val.diagnosis} on {val.date} by {val.clinician}"
                     for val in self.base
                 ],
             )
@@ -379,8 +387,10 @@ class ViolenceAndTrauma(Transformer[str]):
             str: The transformed object.
         """
         if not self.base:
-            return "denied any history of violence or trauma"
-        return f'reported that "{self.base}"'
+            return """
+            {{REPORTING_GUARDIAN}} denied any history of violence or trauma for
+            {{PREFERRED_NAME}}."""
+        return f'{{REPORTING_GUARDIAN}} reported that "{self.base}."'
 
 
 class AggressiveBehavior(Transformer[str]):
@@ -393,11 +403,12 @@ class AggressiveBehavior(Transformer[str]):
             str: The transformed object.
         """
         if not self.base:
-            return (
-                "denied any history of homicidality or severe physically aggressive "
-                "behaviors towards others."
-            )
-        return f'reported that "{self.base}"'
+            return """
+                {{REPORTING_GUARDIAN}} denied any history of homicidality or
+                severe physically aggressive "behaviors towards others for
+                {{PREFERRED_NAME}}.
+            """
+        return f'{{REPORTING_GUARDIAN}} reported that "{self.base}."'
 
 
 class ChildrenServices(Transformer[str]):
@@ -410,5 +421,25 @@ class ChildrenServices(Transformer[str]):
             str: The transformed object.
         """
         if not self.base:
-            return "denied any history of ACS involvement."
-        return f'reported that "{self.base}"'
+            return """
+                {{REPORTING_GUARDIAN}} denied any history of ACS involvement for
+                {{PREFERRED_NAME}}.
+            """
+        return '{{REPORTING_GUARDIAN}} reported that "{self.base}".'
+
+
+class SelfHarm(Transformer[str]):
+    """Transformer for the self harm information."""
+
+    def transform(self) -> str:
+        """Transforms the self harm information to a string.
+
+        Returns:
+            str: The transformed object.
+        """
+        if not self.base:
+            return (
+                "{{REPORTING_GUARDIAN}} denied any history of serious self-injurious"
+                " harm or suicidal ideation for {{PREFERRED_NAME}}"
+            )
+        return "{{REPORTING_GUARDIAN}} reported that " + f'"{self.base}".'
