@@ -96,13 +96,13 @@ class DocumentCorrections:
         ]
 
         for pair in reversed(they_verb_pairs):
-            sentence = self._correct_verb_conjugation(sentence, pair)
+            sentence = self._correct_they_verb_conjugation(sentence, pair)
 
         if sentence[0].islower():
             new_sentence = sentence[0].upper() + sentence[1:]
             self.replacer.replace(sentence, new_sentence)
 
-    def _correct_verb_conjugation(
+    def _correct_they_verb_conjugation(
         self,
         sentence: str,
         pair: SubjectVerbPair,
@@ -128,7 +128,7 @@ class DocumentCorrections:
                     subject_token=pair.subject_token,
                     verb_token=child,
                 )
-                sentence = self._correct_verb_conjugation(sentence, child_pair)
+                sentence = self._correct_they_verb_conjugation(sentence, child_pair)
         if pair.verb_token.tag_ != "VBZ" and not (
             pair.verb_token.tag_ == "VBD" and pair.verb_token.lemma_ == "be"
         ):
@@ -405,14 +405,14 @@ def join_with_oxford_comma(
     return f"{', '.join(items[:-1])}, and {items[-1]}"
 
 
-def rank_suffix(number: int | str) -> str:
-    """Converts a number to its rank.
+def ordinal_suffix(number: int | str) -> str:
+    """Converts a number to its ordinal suffix.
 
     Args:
         number: The number to convert.
 
     Returns:
-        str: The rank of the number.
+        str: The ordinal suffix of the number.
     """
     number = int(number)
 
@@ -428,43 +428,3 @@ def rank_suffix(number: int | str) -> str:
     if last_digit == 3:  # noqa: PLR2004
         return "rd"
     return "th"
-
-
-def string_to_int(string: str) -> int:
-    """Converts a string to an integer.
-
-    Removes all non-numeric characters from the string before converting it to an
-    integer.
-
-    Args:
-        string: The string to convert.
-
-    Returns:
-        int: The integer representation of the string.
-    """
-    no_decimal = string.split(".")[0]
-    value = int("".join(filter(str.isdigit, no_decimal)))
-    if no_decimal.startswith("-"):
-        value *= -1
-    return value
-
-
-def string_to_float(string: str) -> float:
-    """Converts a string to a float.
-
-    Removes all non-numeric characters from the string before converting it to a
-    float.
-
-    Args:
-        string: The string to convert.
-
-    Returns:
-        float: The float representation of the string.
-    """
-    no_second_period = ".".join(string.split(".")[:2])
-    value = float(
-        "".join(filter(lambda x: x.isdigit() or x == ".", no_second_period)),
-    )
-    if no_second_period.startswith("-"):
-        value *= -1
-    return value

@@ -157,7 +157,7 @@ class ReportWriter:
         desired_outcome = (
             f'"{patient.desired_outcome}"' if patient.desired_outcome else PLACEHOLDER
         )
-        grade_superscript = utils.rank_suffix(patient.education.grade)
+        grade_superscript = utils.ordinal_suffix(patient.education.grade)
 
         texts = [
             f"""
@@ -330,7 +330,7 @@ class ReportWriter:
         else:
             iep_prior_text = f"""{patient.preferred_name} has never had an
                               Individiualized Education Program (IEP)."""
-        grade_superscript = utils.rank_suffix(education.grade)
+        grade_superscript = utils.ordinal_suffix(education.grade)
         past_schools = education.past_schools.transform()
 
         text_prior = f"""
