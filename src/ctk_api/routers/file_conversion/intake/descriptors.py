@@ -28,18 +28,18 @@ class Pronouns(enum.Enum):
 class GuardianRelationship(enum.Enum):
     """The relationship of the guardian to the patient."""
 
-    biological_mother = 0
-    biological_father = 1
-    grandparent = 2
-    aunt = 3
-    uncle = 4
-    foster_father = 5
-    foster_mother = 6
-    adoptive_father = 7
-    adoptive_mother = 8
-    state_or_foster_care_representative = 9
-    gestational_carrier = 10
-    other = 11
+    biological_mother = 1
+    biological_father = 2
+    grandparent = 3
+    aunt = 4
+    uncle = 5
+    foster_father = 6
+    foster_mother = 7
+    adoptive_father = 8
+    adoptive_mother = 9
+    state_or_foster_care_representative = 10
+    gestational_carrier = 11
+    other = 12
 
 
 class Handedness(enum.Enum):

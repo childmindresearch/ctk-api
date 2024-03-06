@@ -155,7 +155,9 @@ class Guardian:
         if relationship_id == descriptors.GuardianRelationship.other.value:
             self.relationship = patient_data["other_relation"]
         else:
-            self.relationship = descriptors.GuardianRelationship(relationship_id).name
+            self.relationship = descriptors.GuardianRelationship(
+                relationship_id,
+            ).name.replace("_", " ")
 
     @property
     def full_name(self) -> str:

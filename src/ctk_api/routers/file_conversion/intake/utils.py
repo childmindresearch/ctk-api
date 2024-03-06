@@ -502,3 +502,22 @@ def read_subject_row(
         status_code=status.HTTP_404_NOT_FOUND,
         detail="Patient not found.",
     )
+
+
+def string_to_int(string: str) -> int:
+    """Takes the numeric characters and interprets as integer.
+
+    Args:
+        string: The string to convert.
+
+    Returns:
+        The integer value of the string.
+    """
+    numerics = "".join(filter(lambda x: x.isdigit() or x == ".", string))
+    numerics = ".".join(numerics.split(".")[:2])
+    return round(float(numerics))
+
+
+def remove_excess_whitespace(text: str) -> str:
+    """Removes excess whitespace from a string."""
+    return " ".join(text.split())

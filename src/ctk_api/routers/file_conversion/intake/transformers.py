@@ -136,10 +136,8 @@ class BirthComplications(
         names = [val.name.replace("_", " ") for val in self.base]
         if len(names) == 1:
             return f"the following birth complication: {names[0]}"
-        return "the following birth complications:" + ", and".join(
-            ", ".join(
-                [", ".join(names[:-1]), names[-1]],
-            ),
+        return "the following birth complications: " + utils.join_with_oxford_comma(
+            names,
         )
 
 

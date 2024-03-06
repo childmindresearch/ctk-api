@@ -183,3 +183,33 @@ def correct_verb_conjugation(sentence: str, expected: str) -> None:
         )
 
     assert sentence == expected
+
+
+def test_remove_excess_whitespace() -> None:
+    """Test the _remove_excess_whitespace method."""
+    test_text = """    This   is a test string with
+
+    excess    whitespace.     """
+    expected = "This is a test string with excess whitespace."
+
+    actual = utils.remove_excess_whitespace(test_text)
+
+    assert actual == expected
+
+
+@pytest.mark.parametrize(
+    ("string", "expected"),
+    [
+        ("1", 1),
+        ("1st", 1),
+        ("1 month", 1),
+        ("1.5", 2),
+        ("1.5 months", 2),
+    ],
+)
+def test_string_to_int(string: str, expected: int) -> None:
+    """Test the string_to_int method."""
+    actual = utils.string_to_int(string)
+
+    assert actual == expected
+    assert isinstance(actual, int)

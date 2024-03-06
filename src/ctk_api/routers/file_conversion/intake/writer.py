@@ -157,7 +157,10 @@ class ReportWriter:
         desired_outcome = (
             f'"{patient.desired_outcome}"' if patient.desired_outcome else PLACEHOLDER
         )
-        grade_superscript = utils.ordinal_suffix(patient.education.grade)
+        if patient.education.grade.isnumeric():
+            grade_superscript = utils.ordinal_suffix(int(patient.education.grade))
+        else:
+            grade_superscript = ""
 
         texts = [
             f"""
@@ -178,7 +181,7 @@ class ReportWriter:
             study through {referral}.
         """,
         ]
-        texts = [self._remove_excess_whitespace(text) for text in texts]
+        texts = [utils.remove_excess_whitespace(text) for text in texts]
 
         self.report.add_heading("REASON FOR VISIT", level=1)
         paragraph = self.report.add_paragraph(texts[0])
@@ -210,7 +213,7 @@ class ReportWriter:
             during infancy and was {development.soothing_difficulty.name} to
             soothe.
         """
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading("Prenatal and Birth History", level=2)
         self.report.add_paragraph(text)
@@ -231,7 +234,7 @@ class ReportWriter:
             {patient.pronouns[0].capitalize()} {daytime_dryness} and
             {nighttime_dryness}.
         """
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading("Developmental Milestones", level=2)
         self.report.add_paragraph(text)
@@ -249,7 +252,7 @@ class ReportWriter:
             {reporting_guardian} reported that
             {patient.preferred_name} {early_intervention} and {cpse}.
         """
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading("Early Educational Interventions", level=2)
         self.report.add_paragraph(text)
@@ -273,7 +276,7 @@ class ReportWriter:
         Documentation of the results of the evaluation(s) were unavailable at
         the time of writing this report/ Notable results include:
         """
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading("Previous Testing", level=2)
         self.report.add_paragraph(text)
@@ -330,7 +333,10 @@ class ReportWriter:
         else:
             iep_prior_text = f"""{patient.preferred_name} has never had an
                               Individiualized Education Program (IEP)."""
-        grade_superscript = utils.ordinal_suffix(education.grade)
+        if education.grade.isnumeric():
+            grade_superscript = utils.ordinal_suffix(education.grade)
+        else:
+            grade_superscript = ""
         past_schools = education.past_schools.transform()
 
         text_prior = f"""
@@ -353,8 +359,8 @@ class ReportWriter:
                 weaknesses in {PLACEHOLDER}.
             """,
         ]
-        text_prior = self._remove_excess_whitespace(text_prior)
-        texts_current = [self._remove_excess_whitespace(text) for text in texts_current]
+        text_prior = utils.remove_excess_whitespace(text_prior)
+        texts_current = [utils.remove_excess_whitespace(text) for text in texts_current]
 
         self.report.add_heading("Educational History", level=2)
         self.report.add_paragraph(text_prior)
@@ -383,7 +389,7 @@ class ReportWriter:
                 for member in household.members
             ],
         )
-        language_fluencies = self._join_patient_languages()
+        language_fluencies = self._join_patient_languages(self.intake.patient.languages)
 
         text_home = f"""
             {patient.preferred_name} lives in {household.city},
@@ -404,8 +410,8 @@ class ReportWriter:
             details of behavioral difficulties). (Also include any history of
             sleep difficulties, daily living skills, poor hygiene, etc.)
             """
-        text_home = self._remove_excess_whitespace(text_home)
-        text_adaptive = self._remove_excess_whitespace(text_adaptive)
+        text_home = utils.remove_excess_whitespace(text_home)
+        text_adaptive = utils.remove_excess_whitespace(text_adaptive)
 
         self.report.add_heading("Home and Adaptive Functioning", level=2)
         self.report.add_paragraph(text_home)
@@ -426,7 +432,7 @@ class ReportWriter:
             (positive/fair/poor) relationship with them.
             {patient.preferred_name}'s hobbies include {PLACEHOLDER}.
         """
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading("Social Functioning", level=2)
         self.report.add_paragraph(text)
@@ -451,7 +457,7 @@ class ReportWriter:
             {patient.guardian.full_name} denied any history of past psychiatric
             hospitalizations for {patient.preferred_name}.
         """
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading("Past Psychiatric Hospitalizations", level=2)
         self.report.add_paragraph(text)
@@ -461,7 +467,7 @@ class ReportWriter:
         patient = self.intake.patient
 
         text = patient.psychiatric_history.children_services.transform()
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading(
             "Administration for Children's Services (ACS) Involvement",
@@ -474,7 +480,7 @@ class ReportWriter:
         patient = self.intake.patient
 
         text = patient.psychiatric_history.aggresive_behaviors.transform()
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading(
             "Past Severe Aggressive Behaviors and Homicidality",
@@ -492,7 +498,7 @@ class ReportWriter:
         text = f"""
             {patient.preferred_name} {past_diagnoses}.
         """
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading("Past Psychiatric Diagnoses", level=2)
         self.report.add_paragraph(text)
@@ -508,7 +514,7 @@ class ReportWriter:
         text = f"""
             {patient.preferred_name}'s {diagnosis_text}
         """
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading("Family Psychiatric History", level=2)
         self.report.add_paragraph(text)
@@ -539,7 +545,7 @@ class ReportWriter:
                 for intervention in interventions
             ]
 
-        texts = [self._remove_excess_whitespace(text) for text in texts]
+        texts = [utils.remove_excess_whitespace(text) for text in texts]
 
         self.report.add_heading("Past Therapeutic Interventions", level=2)
         for text in texts:
@@ -550,7 +556,7 @@ class ReportWriter:
         patient = self.intake.patient
 
         text = patient.psychiatric_history.self_harm.transform()
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading(
             "Past Self-Injurious Behaviors and Suicidality",
@@ -563,7 +569,7 @@ class ReportWriter:
         patient = self.intake.patient
 
         text = patient.psychiatric_history.violence_and_trauma.transform()
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading("Exposure to Violence and Trauma", level=2)
         self.report.add_paragraph(text)
@@ -582,7 +588,7 @@ class ReportWriter:
             hearing device. {patient.guardian.full_name} denied any history of
             seizures, head trauma, migraines, meningitis or encephalitis.
         """
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
     @write_with_rgb_text(RGB_TESTING)
     def write_clinical_summary_and_impressions(self) -> None:
@@ -598,7 +604,7 @@ class ReportWriter:
             the Child Mind Institute in the interest of participating in
             research/due to parental concerns regarding {concerns}.
         """
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading("CLINICAL SUMMARY AND IMPRESSIONS", level=1)
         self.report.add_paragraph(text)
@@ -610,7 +616,7 @@ class ReportWriter:
             Based on the results of the evaluation, the following recommendations are
             provided:
         """
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading("RECOMMENDATIONS", level=1)
         self.report.add_paragraph(text)
@@ -659,7 +665,7 @@ class ReportWriter:
         being treated by Doctortype, DoctorName, monthly/weekly/biweekly. The
         medication has been ineffective/effective.
         """
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading("Current Psychiatric Medications", level=2)
         self.report.add_paragraph(text)
@@ -684,7 +690,7 @@ class ReportWriter:
         tantrums…).
         """,
         ]
-        texts = [self._remove_excess_whitespace(text) for text in texts]
+        texts = [utils.remove_excess_whitespace(text) for text in texts]
 
         paragraph = self.report.add_paragraph(texts[0])
         paragraph.add_run(texts[1])
@@ -703,7 +709,7 @@ class ReportWriter:
         tics, inattention/hyperactivity, enuresis/encopresis, trauma, sleep,
         panic, anxiety or obsessive-compulsive disorders.
         """
-        text = self._remove_excess_whitespace(text)
+        text = utils.remove_excess_whitespace(text)
 
         self.report.add_paragraph(text)
 
@@ -743,14 +749,10 @@ class ReportWriter:
         run.add_break(enum_text.WD_BREAK.PAGE)
 
     @staticmethod
-    def _remove_excess_whitespace(text: str) -> str:
-        """Removes excess whitespace from a string."""
-        return " ".join(text.split())
-
-    def _join_patient_languages(self) -> str:
+    def _join_patient_languages(languages: list[parser.Language]) -> str:
         """Joins the patient's languages."""
         fluency_groups = itertools.groupby(
-            self.intake.patient.languages,
+            languages,
             key=lambda language: language.fluency,
         )
         fluency_dict = {
@@ -758,21 +760,21 @@ class ReportWriter:
             for fluency, language_group in fluency_groups
         }
 
-        language_description = ""
-        for fluency in ("fluent", "proficient", "conversational", "basic"):
-            if fluency not in fluency_dict:
-                continue
-
-            if not language_description and fluency != "basic":
-                language_description += " is "
-
-            if fluency != "basic":
-                language_description += f" {fluency} in "
-            else:
-                language_description += " has basic skills in "
-
-            language_description += (
-                f"{utils.join_with_oxford_comma(fluency_dict[fluency])}"
+        language_descriptions = [
+            f"{fluency} in {utils.join_with_oxford_comma(fluency_dict[fluency])}"
+            for fluency in ["fluent", "proficient", "conversational"]
+            if fluency in fluency_dict
+        ]
+        prepend_is = len(language_descriptions) > 0
+        if "basic" in fluency_dict:
+            language_descriptions.append(
+                (
+                    "has basic skills in "
+                    f"{utils.join_with_oxford_comma(fluency_dict['basic'])}"
+                ),
             )
 
-        return language_description
+        text = utils.join_with_oxford_comma(language_descriptions)
+        if prepend_is:
+            text = "is " + text
+        return text

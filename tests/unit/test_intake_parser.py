@@ -26,7 +26,7 @@ def test_guardian_parser(
     """Tests the Guardian intake form parser."""
     expected_relationship = descriptors.GuardianRelationship(
         test_data["guardian_relationship___1"],
-    ).name
+    ).name.replace("_", " ")
 
     guardian = parser.Guardian(test_data)
 
