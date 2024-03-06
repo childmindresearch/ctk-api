@@ -39,7 +39,7 @@ async def markdown_to_docx(
 @router.post("/intake2docx")
 async def intake_to_docx(
     csv_file: fastapi.UploadFile,
-    redcap_survery_identifier: int = fastapi.Form(
+    redcap_survey_identifier: int = fastapi.Form(
         ...,
         description="The REDCap survey identifier for the intake form.",
     ),
@@ -49,7 +49,7 @@ async def intake_to_docx(
 
     Args:
         csv_file: The intake CSV file from REDCap.
-        redcap_survery_identifier: The REDCap survey identifier for the intake form.
+        redcap_survey_identifier: The REDCap survey identifier for the intake form.
         background_tasks: The FastAPI backgrond tasks object.
 
     Returns:
@@ -59,7 +59,7 @@ async def intake_to_docx(
     logger.debug("Converting intake from to .docx")
     response = controller.intake_to_docx(
         csv_file,
-        redcap_survery_identifier,
+        redcap_survey_identifier,
         background_tasks,
     )
     logger.debug("Converted intake from to .docx.")
