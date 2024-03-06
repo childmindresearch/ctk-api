@@ -1,10 +1,9 @@
 """Middleware for the FastAPI application."""
 import logging
 import uuid
-from collections.abc import Awaitable, Callable, MutableMapping
-from typing import Any
 
 import fastapi
+from starlette import types
 
 from ctk_api.core import config
 
@@ -25,9 +24,9 @@ class RequestLoggerMiddleware:  # pylint: disable=too-few-public-methods
 
     async def __call__(
         self,
-        scope: dict[str, Any],
-        receive: Callable[[], Awaitable[dict[str, Any]]],
-        send: Callable[[MutableMapping[str, Any]], Awaitable[None]],
+        scope: types.Scope,
+        receive: types.Receive,
+        send: types.Send,
     ) -> None:
         """Middleware method that handles incoming HTTP requests.
 

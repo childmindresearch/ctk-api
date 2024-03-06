@@ -1,4 +1,5 @@
 """Configurations for all tests."""
+import pathlib
 import tempfile
 from collections.abc import Generator
 
@@ -15,6 +16,12 @@ def _reset_testing_db() -> None:
     database = sql.Database()
     sql.Base.metadata.drop_all(database.engine)
     database.create_database_schema()
+
+
+@pytest.fixture()
+def data_dir() -> pathlib.Path:
+    """Gets the data directory."""
+    return pathlib.Path(__file__).parent / "data"
 
 
 @pytest.fixture()

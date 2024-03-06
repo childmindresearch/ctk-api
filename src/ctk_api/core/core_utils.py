@@ -41,7 +41,7 @@ def markdown_text_as_docx_response(
             outputfile=str(output_file.name),
         )
 
-    background_tasks.add_task(_remove_file, output_file.name)
+    background_tasks.add_task(remove_file, output_file.name)
     return responses.FileResponse(
         output_file.name,
         filename="md2docx.docx",
@@ -51,7 +51,7 @@ def markdown_text_as_docx_response(
     )
 
 
-def _remove_file(filename: str | pathlib.Path) -> None:
+def remove_file(filename: str | pathlib.Path) -> None:
     """Removes a file.
 
     Args:

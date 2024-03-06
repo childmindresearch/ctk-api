@@ -9,33 +9,40 @@ packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-fastapi = "^0.108.0"
-pydantic = "^2.5.3"
+fastapi = "^0.110.0"
+pydantic = "^2.6.3"
 python-docx = "^1.1.0"
-pydantic-settings = "^2.1.0"
+pydantic-settings = "^2.2.1"
 python-multipart = "^0.0.6"
 uvicorn = "^0.25.0"
-openai = "^1.6.1"
-pypandoc = "^1.12"
-pyyaml = "^6.0.1"
-email-validator = "^2.1.0.post1"
-sqlalchemy = "^2.0.25"
+openai = "^1.12.0"
+pypandoc = "^1.13"
+pyyaml = "6.0"
+email-validator = "^2.1.1"
+sqlalchemy = "^2.0.27"
 psycopg2 = "^2.9.9"
+polars = "^0.20.6"
+pytz = "^2023.4"
+docxcompose = "^1.4.0"
+spacy = "^3.7.4"
+mlconjug3 = "^3.11.0"
+pyjwt = {extras = ["crypto"], version = "^2.8.0"}
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.4.3"
-mypy = "^1.7.1"
-pre-commit = "^3.6.0"
+pytest = "^7.4.4"
+mypy = "^1.8.0"
+pre-commit = "^3.6.2"
 pytest-cov = "^4.1.0"
 httpx = "^0.26.0"
 pytest-dotenv = "^0.5.2"
 pytest-mock = "^3.12.0"
-ruff = "^0.1.7"
+ruff = "^0.2.1"
 types-pyyaml = "^6.0.12.12"
 pytest-asyncio = "^0.23.2"
+types-pytz = "^2024.1.0.20240203"
 
 [tool.poetry.group.docs.dependencies]
-pdoc = "^14.2.0"
+pdoc = "^14.4.0"
 
 [tool.poetry.extras]
 docs = ["pdoc"]
@@ -91,16 +98,10 @@ fixable = ["ALL"]
 unfixable = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
-line-ending = "auto"
-
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
   "S101",  # Allow assets
   "ARG",  # Unused arguments are common in tests (fixtures).
@@ -108,6 +109,12 @@ convention = "google"
   "SLF001",  # Allow private member access.
   "INP001"  # No need for namespace packages in tests.
 ]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
 
 [build-system]
 requires = ["poetry-core>=1.2.0"]

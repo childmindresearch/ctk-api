@@ -6,6 +6,8 @@ import pathlib
 import pydantic
 import pydantic_settings
 
+DATA_DIR = pathlib.Path(__file__).parent.parent / "data"
+
 
 class Settings(pydantic_settings.BaseSettings):  # type: ignore[valid-type, misc]
     """Settings for the API."""
@@ -22,7 +24,7 @@ class Settings(pydantic_settings.BaseSettings):  # type: ignore[valid-type, misc
     )
 
     DIAGNOSES_FILE: pathlib.Path = pydantic.Field(
-        pathlib.Path(__file__).parent.parent / "data" / "diagnoses.json",
+        DATA_DIR / "diagnoses.json",
         json_schema_extra={"env": "DIAGNOSES_FILE"},
     )
 
@@ -35,7 +37,7 @@ class Settings(pydantic_settings.BaseSettings):  # type: ignore[valid-type, misc
         json_schema_extra={"env": "OPENAI_CHAT_COMPLETION_MODEL"},
     )
     OPENAI_CHAT_COMPLETION_PROMPT_FILE: pathlib.Path = pydantic.Field(
-        pathlib.Path(__file__).parent.parent / "data" / "prompts.yaml",
+        DATA_DIR / "prompts.yaml",
         json_schema_extra={"env": "OPENAI_CHAT_COMPLETION_PROMPT_FILE"},
     )
 
