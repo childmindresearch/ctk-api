@@ -511,9 +511,7 @@ class ReportWriter:
         )
         diagnosis_text = family_psychiatric_history.family_diagnoses.transform()
 
-        text = f"""
-            {patient.preferred_name}'s {diagnosis_text}
-        """
+        text = diagnosis_text
         text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading("Family Psychiatric History", level=2)

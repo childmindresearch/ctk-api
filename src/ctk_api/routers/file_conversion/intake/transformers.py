@@ -109,9 +109,15 @@ class BirthComplications(
 ):
     """The transformer for birth complications."""
 
-    def __init__(self, value: list[int]) -> None:
-        """Initializes the pregnancy symptoms transformer."""
-        super().__init__([descriptors.BirthComplications(val) for val in value])
+    def __init__(self, value: list[int], other: str | None = None) -> None:
+        """Initializes the pregnancy symptoms transformer.
+
+        Args:
+            value: The birth complication enum values.
+            other: Specifier for a freeform value.
+
+        """
+        super().__init__([descriptors.BirthComplications(val) for val in value], other)
         if (
             descriptors.BirthComplications.none_of_the_above in self.base
             and len(self.base) > 1
@@ -133,7 +139,17 @@ class BirthComplications(
         if descriptors.BirthComplications.none_of_the_above in self.base:
             return "no birth complications"
 
-        names = [val.name.replace("_", " ") for val in self.base]
+        names = []
+        for val in self.base:
+            if val == descriptors.BirthComplications.other_illnesses:
+                if self.other is None:
+                    raise fastapi.HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Other illness must have a value.",
+                    )
+                names.append(self.other)
+            else:
+                names.append(val.name.replace("_", " "))
         if len(names) == 1:
             return f"the following birth complication: {names[0]}"
         return "the following birth complications: " + utils.join_with_oxford_comma(
@@ -164,7 +180,7 @@ class BirthDelivery(Transformer[descriptors.BirthDelivery]):
 class DeliveryLocation(Transformer[descriptors.DeliveryLocation]):
     """The transformer for birth location."""
 
-    def __init__(self, value: descriptors.DeliveryLocation, other: str) -> None:
+    def __init__(self, value: descriptors.DeliveryLocation, other: str | None) -> None:
         """Initializes the birth location transformer."""
         self.base = descriptors.DeliveryLocation(value)
         self.other = other
@@ -277,7 +293,7 @@ class DevelopmentSkill(Transformer[str | int]):
         if isinstance(self.base, int) or self.base.isnumeric():
             return f"{self.other} at {self.base} months/years"
         if self.base.lower() == "not yet":
-            return "has not {self.other}"
+            return f"has not {self.other} yet"
         if self.base.lower() in ["normal", "late"]:
             return f"{self.other} at a {self.base.lower()} age"
         if self.base.lower() == "early":
@@ -344,19 +360,25 @@ class FamilyDiagnoses(MultiTransformer[descriptors.FamilyPsychiatricHistory]):
 
         text = ""
         if len(past_diagnosis) > 0:
-            text += "family history is significant for "
+            text += "{{PREFERRED_NAME}}'s family history is significant for "
             past_diagosis_texts = [
                 self._past_diagnosis_text(val) for val in past_diagnosis
             ]
             text += utils.join_with_oxford_comma(past_diagosis_texts)
-            text += ". "
+            text += "."
 
         if len(no_past_diagnosis) > 0:
-            no_diagnosis_names = [val.diagnosis for val in no_past_diagnosis]
-            text += (
-                "Family history of the following diagnoses was denied: "
-                + utils.join_with_oxford_comma(no_diagnosis_names)
-            )
+            if text:
+                text += " "
+            if len(no_past_diagnosis) > 1:
+                no_diagnosis_names = [val.diagnosis for val in no_past_diagnosis]
+                text += (
+                    "Family history of the following diagnoses was denied: "
+                    + utils.join_with_oxford_comma(no_diagnosis_names)
+                )
+            else:
+                text += f"Family history of {no_past_diagnosis[0].diagnosis} was denied"
+            text += "."
         return text
 
     @staticmethod
@@ -385,10 +407,11 @@ class ViolenceAndTrauma(Transformer[str]):
             str: The transformed object.
         """
         if not self.base:
-            return """
-            {{REPORTING_GUARDIAN}} denied any history of violence or trauma for
-            {{PREFERRED_NAME}}."""
-        return f'{{REPORTING_GUARDIAN}} reported that "{self.base}."'
+            return (
+                "{{REPORTING_GUARDIAN}} denied any history of violence or trauma for "
+                "{{PREFERRED_NAME}}."
+            )
+        return "{{REPORTING_GUARDIAN}} reported that " + f'"{self.base}".'
 
 
 class AggressiveBehavior(Transformer[str]):
@@ -401,12 +424,12 @@ class AggressiveBehavior(Transformer[str]):
             str: The transformed object.
         """
         if not self.base:
-            return """
-                {{REPORTING_GUARDIAN}} denied any history of homicidality or
-                severe physically aggressive "behaviors towards others for
-                {{PREFERRED_NAME}}.
-            """
-        return f'{{REPORTING_GUARDIAN}} reported that "{self.base}."'
+            return (
+                "{{REPORTING_GUARDIAN}} denied any history of homicidality or "
+                "severe physically aggressive behaviors towards others for "
+                "{{PREFERRED_NAME}}."
+            )
+        return "{{REPORTING_GUARDIAN}} reported that " + f'"{self.base}".'
 
 
 class ChildrenServices(Transformer[str]):
@@ -419,11 +442,11 @@ class ChildrenServices(Transformer[str]):
             str: The transformed object.
         """
         if not self.base:
-            return """
-                {{REPORTING_GUARDIAN}} denied any history of ACS involvement for
-                {{PREFERRED_NAME}}.
-            """
-        return '{{REPORTING_GUARDIAN}} reported that "{self.base}".'
+            return (
+                "{{REPORTING_GUARDIAN}} denied any history of ACS involvement for "
+                "{{PREFERRED_NAME}}."
+            )
+        return "{{REPORTING_GUARDIAN}} reported that " + f'"{self.base}".'
 
 
 class SelfHarm(Transformer[str]):
