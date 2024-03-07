@@ -53,7 +53,9 @@ class Patient:
         self._gender_other = patient_data["childgender_other"]
         self._pronouns_enum = descriptors.Pronouns(patient_data["pronouns"]).name
         self._pronouns_other = patient_data["pronouns_other"]
-        self.handedness = transformers.Handedness(patient_data["dominant_hand"])
+        self.handedness = transformers.Handedness(
+            descriptors.Handedness(patient_data["dominant_hand"]),
+        )
 
         self.referral = patient_data["referral2"]
         self.concerns = patient_data["concern_current"]
@@ -282,7 +284,9 @@ class Development:
         Args:
             patient_data: The patient dataframe.
         """
-        self.weeks_of_pregnancy = patient_data["txt_duration_preg_num"]
+        self.duration_of_pregnancy = transformers.DurationOfPregnancy(
+            patient_data["txt_duration_preg_num"],
+        )
         self.delivery = transformers.BirthDelivery(patient_data["opt_delivery"])
         self.delivery_location = transformers.DeliveryLocation(
             patient_data["birth_location"],
@@ -339,7 +343,7 @@ class PsychiatricHistory:
             descriptors.PastDiagnosis(
                 diagnosis=patient_data[f"pastdx_{index}"],
                 clinician=patient_data[f"dx_name{index}"],
-                date=str(patient_data[f"age_{index}"]),
+                age=str(patient_data[f"age_{index}"]),
             )
             for index in range(1, 11)
             if patient_data[f"pastdx_{index}"]
