@@ -69,10 +69,6 @@ class MultiTransformer(Transformer[list[T]]):
 class Handedness(Transformer[descriptors.Handedness]):
     """The transformer for handedness."""
 
-    def __init__(self, value: descriptors.Handedness) -> None:
-        """Initializes the handedness transformer."""
-        super().__init__(descriptors.Handedness(value))
-
     def transform(self) -> str:
         """Transforms the handedness information to a string.
 
@@ -88,10 +84,6 @@ class IndividualizedEducationProgram(
     Transformer[descriptors.IndividualizedEducationProgram],
 ):
     """The transformer for individualized education programs."""
-
-    def __init__(self, value: descriptors.IndividualizedEducationProgram) -> None:
-        """Initializes the individualized education program transformer."""
-        super().__init__(descriptors.IndividualizedEducationProgram(value))
 
     def transform(self) -> str:
         """Transforms the individualized education program information to a string.
@@ -157,12 +149,26 @@ class BirthComplications(
         )
 
 
+class DurationOfPregnancy(Transformer[str]):
+    """The transfomer for time of pregnancy."""
+
+    def transform(self) -> str:
+        """Transforms the time of pregnancy information to a string.
+
+        Returns:
+            str: The transformed object.
+        """
+        if not self.base:
+            return "unspecified"
+        try:
+            duration_of_pregnancy = float(self.base)
+        except ValueError:
+            return f'"{self.base}"'
+        return f"{duration_of_pregnancy:g} weeks"
+
+
 class BirthDelivery(Transformer[descriptors.BirthDelivery]):
     """The transformer for birth delivery."""
-
-    def __init__(self, value: descriptors.BirthDelivery) -> None:
-        """Initializes the birth delivery transformer."""
-        self.base = descriptors.BirthDelivery(value)
 
     def transform(self) -> str:
         """Transforms the birth delivery information to a string.
@@ -179,11 +185,6 @@ class BirthDelivery(Transformer[descriptors.BirthDelivery]):
 
 class DeliveryLocation(Transformer[descriptors.DeliveryLocation]):
     """The transformer for birth location."""
-
-    def __init__(self, value: descriptors.DeliveryLocation, other: str | None) -> None:
-        """Initializes the birth location transformer."""
-        self.base = descriptors.DeliveryLocation(value)
-        self.other = other
 
     def transform(self) -> str:
         """Transforms the birth location information to a string.
@@ -204,10 +205,6 @@ class DeliveryLocation(Transformer[descriptors.DeliveryLocation]):
 class Adaptability(Transformer[descriptors.Adaptability]):
     """The transformer for infant adaptability."""
 
-    def __init__(self, value: descriptors.Adaptability) -> None:
-        """Initializes the infant adaptability transformer."""
-        self.base = descriptors.Adaptability(value)
-
     def transform(self) -> str:
         """Transforms the infant adaptability information to a string.
 
@@ -217,6 +214,24 @@ class Adaptability(Transformer[descriptors.Adaptability]):
         if self.base == descriptors.Adaptability.difficult:
             return "a slow to warm up temperament"
         return "an adaptable temperament"
+
+
+class GuardianMaritalStatus(Transformer[descriptors.GuardianMaritalStatus]):
+    """The transformer for guardian marital status."""
+
+    def transform(self) -> str:
+        """Transforms the guardian marital status information to a string.
+
+        Returns:
+            str: The transformed object.
+        """
+        if self.base == descriptors.GuardianMaritalStatus.domestic_partnership:
+            return "The parents/guardians are in a domestic partnership"
+        if self.base == descriptors.GuardianMaritalStatus.widowed:
+            return "The parent/guardian is widowed"
+        if self.base == descriptors.GuardianMaritalStatus.never_married:
+            return "The parents/guardians were never married"
+        return f"The parents/guardians are {self.base.name.replace('_', ' ')}"
 
 
 class EarlyIntervention(Transformer[str]):
@@ -314,10 +329,10 @@ class PastDiagnoses(MultiTransformer[descriptors.PastDiagnosis]):
             str: The transformed object.
         """
         if len(self.base) == 0:
-            return "no prior history of psychiatric diagnoses"
+            return "has no prior history of psychiatric diagnoses"
 
         if short:
-            return "a prior history of " + utils.join_with_oxford_comma(
+            return "has a prior history of " + utils.join_with_oxford_comma(
                 [val.diagnosis for val in self.base],
             )
 
@@ -325,7 +340,7 @@ class PastDiagnoses(MultiTransformer[descriptors.PastDiagnosis]):
             "was diagnosed with the following psychiatric diagnoses: "
             + utils.join_with_oxford_comma(
                 [
-                    f"{val.diagnosis} on {val.date} by {val.clinician}"
+                    f"{val.diagnosis} at {val.age} by {val.clinician}"
                     for val in self.base
                 ],
             )

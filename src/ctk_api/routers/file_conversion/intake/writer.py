@@ -13,7 +13,7 @@ from docxcompose import composer
 from fastapi import status
 
 from ctk_api.core import config
-from ctk_api.routers.file_conversion.intake import parser, utils
+from ctk_api.routers.file_conversion.intake import descriptors, parser, utils
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -135,6 +135,7 @@ class ReportWriter:
             "preferred_name": self.intake.patient.preferred_name,
             "date_of_birth": self.intake.patient.date_of_birth.strftime("%m/%d/%Y"),
             "reporting_guardian": self.intake.patient.guardian.full_name,
+            "aged_gender": self.intake.patient.age_gender_label,
             "pronoun_0": self.intake.patient.pronouns[0],
             "pronoun_1": self.intake.patient.pronouns[1],
             "pronoun_2": self.intake.patient.pronouns[2],
@@ -204,11 +205,12 @@ class ReportWriter:
         delivery = development.delivery.transform()
         delivery_location = development.delivery_location.transform()
         adaptability = development.adaptability.transform()
+        duration_of_pregnancy = development.duration_of_pregnancy.transform()
 
         text = f"""
             {patient.guardian.full_name} reported {pregnancy_symptoms}.
             {patient.preferred_name} was born at
-            {development.weeks_of_pregnancy} of gestation with {delivery} at
+            {duration_of_pregnancy} of gestation with {delivery} at
             {delivery_location}. {patient.preferred_name} had {adaptability}
             during infancy and was {development.soothing_difficulty.name} to
             soothe.
@@ -227,7 +229,7 @@ class ReportWriter:
         nighttime_dryness = patient.development.nighttime_dryness.transform()
 
         text = f"""
-            {patient.preferred_name} achievement of social, language, fine and
+            {patient.preferred_name}'s achievement of social, language, fine and
             gross motor developmental milestones were within normal limits, as
             reported by {patient.guardian.full_name}. {patient.preferred_name}
             {started_walking} and {started_talking}.
@@ -322,7 +324,11 @@ class ReportWriter:
         """Writes the educational history to the report."""
         patient = self.intake.patient
         education = patient.education
-        has_iep = education.individualized_educational_program == "yes"
+        has_iep = (
+            education.individualized_educational_program.base
+            == descriptors.IndividualizedEducationProgram.yes.value
+        )
+
         if has_iep:
             iep_prior_text = f"""
                 {patient.preferred_name} was

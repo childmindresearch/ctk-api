@@ -293,23 +293,23 @@ def test_development_skill_transformer(
 @pytest.mark.parametrize(
     ("base", "expected", "short"),
     [
-        ([], "no prior history of psychiatric diagnoses", False),
+        ([], "has no prior history of psychiatric diagnoses", False),
         (
             [
                 descriptors.PastDiagnosis(
                     diagnosis="Anxiety",
-                    date="2022-01-01",
+                    age="8",
                     clinician="Dr. Smith",
                 ),
                 descriptors.PastDiagnosis(
                     diagnosis="Depression",
-                    date="2022-02-01",
+                    age="9",
                     clinician="Dr. Johnson",
                 ),
             ],
             (
-                "was diagnosed with the following psychiatric diagnoses: Anxiety on "
-                "2022-01-01 by Dr. Smith and Depression on 2022-02-01 by Dr. Johnson"
+                "was diagnosed with the following psychiatric diagnoses: Anxiety at "
+                "8 by Dr. Smith and Depression at 9 by Dr. Johnson"
             ),
             False,
         ),
@@ -317,16 +317,16 @@ def test_development_skill_transformer(
             [
                 descriptors.PastDiagnosis(
                     diagnosis="Anxiety",
-                    date="2022-01-01",
+                    age="2022-01-01",
                     clinician="Dr. Smith",
                 ),
                 descriptors.PastDiagnosis(
                     diagnosis="Depression",
-                    date="2022-02-01",
+                    age="2022-02-01",
                     clinician="Dr. Johnson",
                 ),
             ],
-            ("a prior history of Anxiety and Depression"),
+            ("has a prior history of Anxiety and Depression"),
             True,
         ),
     ],
@@ -562,6 +562,86 @@ def test_children_services_transformer(base: str, expected: str) -> None:
 def test_self_harm(base: str, expected: str) -> None:
     """Test that the SelfHarm transformer returns the expected strings."""
     transformer = transformers.SelfHarm(base)
+
+    actual = transformer.transform()
+
+    assert actual == expected
+
+
+@pytest.mark.parametrize(
+    ("base", "expected"),
+    [
+        (
+            descriptors.GuardianMaritalStatus.domestic_partnership,
+            "The parents/guardians are in a domestic partnership",
+        ),
+        (
+            descriptors.GuardianMaritalStatus.widowed,
+            "The parent/guardian is widowed",
+        ),
+        (
+            descriptors.GuardianMaritalStatus.never_married,
+            "The parents/guardians were never married",
+        ),
+        (
+            descriptors.GuardianMaritalStatus.married,
+            "The parents/guardians are married",
+        ),
+        (
+            descriptors.GuardianMaritalStatus.divorced,
+            "The parents/guardians are divorced",
+        ),
+        (
+            descriptors.GuardianMaritalStatus.separated,
+            "The parents/guardians are separated",
+        ),
+    ],
+)
+def test_guardian_marital_status_transformer(
+    base: descriptors.GuardianMaritalStatus,
+    expected: str,
+) -> None:
+    """Test that the GuardianMaritalStatus transformer returns the expected strings."""
+    transformer = transformers.GuardianMaritalStatus(base)
+
+    actual = transformer.transform()
+
+    assert actual == expected
+
+
+@pytest.mark.parametrize(
+    ("duration", "expected"),
+    [
+        ("", "unspecified"),
+        ("42", "42 weeks"),
+        ("42.5", "42.5 weeks"),
+        ("9 months", '"9 months"'),
+        ("non$en$e", '"non$en$e"'),
+    ],
+)
+def test_duration_of_pregnancy_transformer(duration: str, expected: str) -> None:
+    """Test that the DurationOfPregnancy transformer returns the expected strings."""
+    transformer = transformers.DurationOfPregnancy(duration)
+
+    actual = transformer.transform()
+
+    assert actual == expected
+
+
+@pytest.mark.parametrize(
+    ("handedness", "expected"),
+    [
+        (descriptors.Handedness.left, "left-handed"),
+        (descriptors.Handedness.right, "right-handed"),
+        (descriptors.Handedness.unknown, ""),
+    ],
+)
+def test_handedness_transformer(
+    handedness: descriptors.Handedness,
+    expected: str,
+) -> None:
+    """Test that the Handedness transformer returns the expected strings."""
+    transformer = transformers.Handedness(handedness)
 
     actual = transformer.transform()
 
