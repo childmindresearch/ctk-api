@@ -44,6 +44,15 @@ class Transformer(Generic[T], abc.ABC):
         self.base = value
         self.other = other
 
+    def __str__(self) -> str:
+        """Returns the transformed object.
+
+        This is overwritten as accidentally printing the object, rather than the
+        transformed object, is an easy mistake to make but should rarely, if ever, be
+        done.
+        """
+        return self.transform()
+
     @abc.abstractmethod
     def transform(self) -> str:
         """Transforms the given object.
@@ -64,6 +73,27 @@ class MultiTransformer(Transformer[list[T]]):
         """Initializes the multi transformer."""
         self.base = value
         self.other = other
+
+    def __str__(self) -> str:
+        """Returns the transformed object.
+
+        This is overwritten as accidentally printing the object, rather than the
+        transformed object, is an easy mistake to make but should rarely, if ever, be
+        done.
+        """
+        return self.transform()
+
+    @abc.abstractmethod
+    def transform(self) -> str:
+        """Transforms the given object.
+
+        Args:
+            obj: The object to be transformed.
+
+        Returns:
+            T: The transformed object.
+        """
+        ...
 
 
 class Handedness(Transformer[descriptors.Handedness]):

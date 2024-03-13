@@ -150,10 +150,10 @@ class ReportWriter:
     def write_reason_for_visit(self) -> None:
         """Writes the reason for visit to the end of the report."""
         patient = self.intake.patient
-        handedness = patient.handedness.transform()
-        iep = patient.education.individualized_educational_program.transform()
-        past_diagnoses = patient.psychiatric_history.past_diagnoses.transform()
-        classroom = patient.education.classroom_type.transform()
+        handedness = patient.handedness
+        iep = patient.education.individualized_educational_program
+        past_diagnoses = patient.psychiatric_history.past_diagnoses
+        classroom = patient.education.classroom_type
         concerns = f'"{patient.concerns}"' if patient.concerns else PLACEHOLDER
         referral = f'"{patient.referral}"' if patient.referral else PLACEHOLDER
         desired_outcome = (
@@ -201,11 +201,11 @@ class ReportWriter:
         """Writes the prenatal and birth history of the patient to the report."""
         patient = self.intake.patient
         development = patient.development
-        pregnancy_symptoms = development.birth_complications.transform()
-        delivery = development.delivery.transform()
-        delivery_location = development.delivery_location.transform()
-        adaptability = development.adaptability.transform()
-        duration_of_pregnancy = development.duration_of_pregnancy.transform()
+        pregnancy_symptoms = development.birth_complications
+        delivery = development.delivery
+        delivery_location = development.delivery_location
+        adaptability = development.adaptability
+        duration_of_pregnancy = development.duration_of_pregnancy
 
         text = f"""
             {patient.guardian.full_name} reported {pregnancy_symptoms}.
@@ -223,10 +223,10 @@ class ReportWriter:
     def write_developmental_milestones(self) -> None:
         """Writes the developmental milestones to the report."""
         patient = self.intake.patient
-        started_walking = patient.development.started_walking.transform()
-        started_talking = patient.development.started_talking.transform()
-        daytime_dryness = patient.development.daytime_dryness.transform()
-        nighttime_dryness = patient.development.nighttime_dryness.transform()
+        started_walking = patient.development.started_walking
+        started_talking = patient.development.started_talking
+        daytime_dryness = patient.development.daytime_dryness
+        nighttime_dryness = patient.development.nighttime_dryness
 
         text = f"""
             {patient.preferred_name}'s achievement of social, language, fine and
@@ -247,8 +247,8 @@ class ReportWriter:
         development = patient.development
 
         reporting_guardian = patient.guardian.full_name
-        early_intervention = development.early_intervention_age.transform()
-        cpse = development.cpse_age.transform()
+        early_intervention = development.early_intervention_age
+        cpse = development.cpse_age
 
         text = f"""
             {reporting_guardian} reported that
@@ -343,7 +343,7 @@ class ReportWriter:
             grade_superscript = utils.ordinal_suffix(education.grade)
         else:
             grade_superscript = ""
-        past_schools = education.past_schools.transform()
+        past_schools = education.past_schools
 
         text_prior = f"""
             {patient.preferred_name} {past_schools}. {patient.pronouns[0]}
@@ -472,7 +472,7 @@ class ReportWriter:
         """Writes the ACS involvement to the report."""
         patient = self.intake.patient
 
-        text = patient.psychiatric_history.children_services.transform()
+        text = str(patient.psychiatric_history.children_services)
         text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading(
@@ -485,7 +485,7 @@ class ReportWriter:
         """Writes the past aggressive behaviors and homicidality to the report."""
         patient = self.intake.patient
 
-        text = patient.psychiatric_history.aggresive_behaviors.transform()
+        text = str(patient.psychiatric_history.aggresive_behaviors)
         text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading(
@@ -515,9 +515,9 @@ class ReportWriter:
         family_psychiatric_history = (
             patient.psychiatric_history.family_psychiatric_history
         )
-        diagnosis_text = family_psychiatric_history.family_diagnoses.transform()
+        diagnosis_text = family_psychiatric_history.family_diagnoses
 
-        text = diagnosis_text
+        text = str(diagnosis_text)
         text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading("Family Psychiatric History", level=2)
@@ -559,7 +559,7 @@ class ReportWriter:
         """Writes the past self-injurious behaviors and suicidality to the report."""
         patient = self.intake.patient
 
-        text = patient.psychiatric_history.self_harm.transform()
+        text = str(patient.psychiatric_history.self_harm)
         text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading(
@@ -572,7 +572,7 @@ class ReportWriter:
         """Writes the exposure to violence and trauma to the report."""
         patient = self.intake.patient
 
-        text = patient.psychiatric_history.violence_and_trauma.transform()
+        text = str(patient.psychiatric_history.violence_and_trauma)
         text = utils.remove_excess_whitespace(text)
 
         self.report.add_heading("Exposure to Violence and Trauma", level=2)
