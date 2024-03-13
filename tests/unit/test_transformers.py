@@ -24,9 +24,7 @@ def test_individualized_education_program_transformer(
     """Test that the IEP transformer returns the expected strings."""
     transformer = transformers.IndividualizedEducationProgram(iep)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -65,9 +63,7 @@ def test_birth_complications_transformer(
     """Test that the BirthComplications transformer returns the expected strings."""
     transformer = transformers.BirthComplications(value, other)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -94,9 +90,7 @@ def test_birth_delivery_transformer(
     """Test that the BirthDelivery transformer returns the expected strings."""
     transformer = transformers.BirthDelivery(value)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -137,9 +131,7 @@ def test_delivery_location_transformer(
     """Test that the DeliveryLocation transformer returns the expected strings."""
     transformer = transformers.DeliveryLocation(value, other)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -162,9 +154,7 @@ def test_adaptability_transformer(
     """Test that the Adaptability transformer returns the expected strings."""
     transformer = transformers.Adaptability(value)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -187,9 +177,7 @@ def test_early_intervention_transformer(
     """Test that the EarlyIntervention transformer returns the expected strings."""
     transformer = transformers.EarlyIntervention(base)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -215,9 +203,7 @@ def test_cpse_transformer(
     """Test that the CPSE transformer returns the expected strings."""
     transformer = transformers.CPSE(base)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -243,9 +229,7 @@ def test_past_schools_transformer(
     """Test that the PastSchools transformer returns the expected strings."""
     transformer = transformers.PastSchools(base)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -285,9 +269,7 @@ def test_development_skill_transformer(
     other = "talked"
     transformer = transformers.DevelopmentSkill(base, other)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -372,9 +354,7 @@ def test_household_relationship_transformer(
     """Test that the HouseholdRelationship transformer returns the expected strings."""
     transformer = transformers.HouseholdRelationship(base, other)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -462,9 +442,7 @@ def test_family_diagnoses_transformer(
     """Test that the FamilyDiagnoses transformer returns the expected strings."""
     transformer = transformers.FamilyDiagnoses(base)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -487,9 +465,7 @@ def test_violence_and_trauma_transformer_no_history(base: str, expected: str) ->
     """Test that the ViolenceAndTrauma transformer returns the expected strings."""
     transformer = transformers.ViolenceAndTrauma(base)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -513,9 +489,7 @@ def test_aggressive_behavior_transformer(base: str, expected: str) -> None:
     """Test that the AggressiveBehavior transformer returns the expected strings."""
     transformer = transformers.AggressiveBehavior(base)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -538,9 +512,7 @@ def test_children_services_transformer(base: str, expected: str) -> None:
     """Test that the ChildrenServices transformer returns the expected strings."""
     transformer = transformers.ChildrenServices(base)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -563,9 +535,7 @@ def test_self_harm(base: str, expected: str) -> None:
     """Test that the SelfHarm transformer returns the expected strings."""
     transformer = transformers.SelfHarm(base)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -604,9 +574,7 @@ def test_guardian_marital_status_transformer(
     """Test that the GuardianMaritalStatus transformer returns the expected strings."""
     transformer = transformers.GuardianMaritalStatus(base)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -623,9 +591,7 @@ def test_duration_of_pregnancy_transformer(duration: str, expected: str) -> None
     """Test that the DurationOfPregnancy transformer returns the expected strings."""
     transformer = transformers.DurationOfPregnancy(duration)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -643,9 +609,7 @@ def test_handedness_transformer(
     """Test that the Handedness transformer returns the expected strings."""
     transformer = transformers.Handedness(handedness)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
 
 
 @pytest.mark.parametrize(
@@ -681,6 +645,4 @@ def test_classroom_type_transformer(
     """Test that the ClassroomType transformer returns the expected strings."""
     transformer = transformers.ClassroomType(base, other)
 
-    actual = transformer.transform()
-
-    assert actual == expected
+    assert str(transformer) == expected
