@@ -268,6 +268,23 @@ class CPSE(Transformer[str]):
         )
 
 
+class ClassroomType(Transformer[descriptors.ClassroomType]):
+    """The transformer for classroom type."""
+
+    def transform(self) -> str:
+        """Transforms the classroom type information to a string.
+
+        Returns:
+            str: The transformed object.
+        """
+        if self.base == descriptors.ClassroomType.other:
+            if self.other is None:
+                return "an unspecified classroom type"
+            return self.other
+
+        return self.base.name.replace("_", " ").replace("COLON", ":").strip()
+
+
 @dataclasses.dataclass
 class PastSchoolInterface:
     """Interface for past school class.
@@ -329,15 +346,15 @@ class PastDiagnoses(MultiTransformer[descriptors.PastDiagnosis]):
             str: The transformed object.
         """
         if len(self.base) == 0:
-            return "has no prior history of psychiatric diagnoses"
+            return "with no prior history of psychiatric diagnoses"
 
         if short:
-            return "has a prior history of " + utils.join_with_oxford_comma(
+            return "with a prior history of " + utils.join_with_oxford_comma(
                 [val.diagnosis for val in self.base],
             )
 
         return (
-            "was diagnosed with the following psychiatric diagnoses: "
+            "who was diagnosed with the following psychiatric diagnoses: "
             + utils.join_with_oxford_comma(
                 [
                     f"{val.diagnosis} at {val.age} by {val.clinician}"
@@ -373,8 +390,10 @@ class FamilyDiagnoses(MultiTransformer[descriptors.FamilyPsychiatricHistory]):
         no_past_diagnosis = [val for val in self.base if val.no_formal_diagnosis]
         past_diagnosis = [val for val in self.base if not val.no_formal_diagnosis]
 
-        text = ""
+        text = self.other if self.other else ""
         if len(past_diagnosis) > 0:
+            if text:
+                text += " "
             text += "{{PREFERRED_NAME}}'s family history is significant for "
             past_diagosis_texts = [
                 self._past_diagnosis_text(val) for val in past_diagnosis

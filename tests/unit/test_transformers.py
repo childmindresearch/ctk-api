@@ -293,7 +293,7 @@ def test_development_skill_transformer(
 @pytest.mark.parametrize(
     ("base", "expected", "short"),
     [
-        ([], "has no prior history of psychiatric diagnoses", False),
+        ([], "with no prior history of psychiatric diagnoses", False),
         (
             [
                 descriptors.PastDiagnosis(
@@ -308,8 +308,8 @@ def test_development_skill_transformer(
                 ),
             ],
             (
-                "was diagnosed with the following psychiatric diagnoses: Anxiety at "
-                "8 by Dr. Smith and Depression at 9 by Dr. Johnson"
+                "who was diagnosed with the following psychiatric diagnoses: Anxiety "
+                "at 8 by Dr. Smith and Depression at 9 by Dr. Johnson"
             ),
             False,
         ),
@@ -326,7 +326,7 @@ def test_development_skill_transformer(
                     clinician="Dr. Johnson",
                 ),
             ],
-            ("has a prior history of Anxiety and Depression"),
+            ("with a prior history of Anxiety and Depression"),
             True,
         ),
     ],
@@ -642,6 +642,44 @@ def test_handedness_transformer(
 ) -> None:
     """Test that the Handedness transformer returns the expected strings."""
     transformer = transformers.Handedness(handedness)
+
+    actual = transformer.transform()
+
+    assert actual == expected
+
+
+@pytest.mark.parametrize(
+    ("base", "other", "expected"),
+    [
+        (
+            descriptors.ClassroomType.general_education,
+            None,
+            "general education",
+        ),
+        (
+            descriptors.ClassroomType._12COLON1COLON1,
+            None,
+            "12:1:1",
+        ),
+        (
+            descriptors.ClassroomType.other,
+            "test classroom type",
+            "test classroom type",
+        ),
+        (
+            descriptors.ClassroomType.other,
+            None,
+            "an unspecified classroom type",
+        ),
+    ],
+)
+def test_classroom_type_transformer(
+    base: descriptors.ClassroomType,
+    other: str | None,
+    expected: str,
+) -> None:
+    """Test that the ClassroomType transformer returns the expected strings."""
+    transformer = transformers.ClassroomType(base, other)
 
     actual = transformer.transform()
 

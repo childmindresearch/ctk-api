@@ -1,6 +1,7 @@
 """Utilities for the intake parser."""
 import dataclasses
 import re
+import warnings
 
 import docx
 import fastapi
@@ -440,7 +441,7 @@ def read_subject_row(
     """Reads the subject row from the intake CSV file.
 
     All variables are interpreted as strings unless explicitly specified otherwise as
-    the REDCap .csv is too inconsistent in its typing.
+    the REDCap .csv is too inconsistent in its typing to rely on automated detection.
 
     Args:
         csv_file: The intake CSV file.
@@ -454,11 +455,14 @@ def read_subject_row(
     """
     dtypes = {
         "age": pl.Float32,
+        "biohx_dad_other": pl.Int8,
+        "biohx_mom_other": pl.Int8,
         "birth_location": pl.Int8,
         "child_language1_fluency": pl.Int8,
         "child_language2_fluency": pl.Int8,
         "child_language3_fluency": pl.Int8,
         "childgender": pl.Int8,
+        "classroomtype": pl.Int8,
         "dominant_hand": pl.Int8,
         "guardian_maritalstatus": pl.Int8,
         "guardian_relationship___1": pl.Int8,
@@ -480,11 +484,21 @@ def read_subject_row(
         else:
             dtypes["peopleinhome_relationship"] = pl.Int8
 
-    intake_df = pl.read_csv(
-        csv_file.file,
-        infer_schema_length=0,
-        dtypes=dtypes,
-    )
+    with warnings.catch_warnings():
+        # File only exists in memory; ignore this warning.
+        warnings.filterwarnings(
+            "ignore",
+            message=(
+                "Polars found a filename. Ensure you pass a path to the file "
+                "instead of a python file object when possible for best "
+                "performance."
+            ),
+        )
+        intake_df = pl.read_csv(
+            csv_file.file,
+            infer_schema_length=0,
+            dtypes=dtypes,
+        )
 
     subject_df = intake_df.filter(
         intake_df["redcap_survey_identifier"] == redcap_survey_identifier,
@@ -492,15 +506,9 @@ def read_subject_row(
     if subject_df.height == 1:
         return subject_df
 
-    if subject_df.height > 1:
-        raise fastapi.HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Multiple patients found.",
-        )
-
     raise fastapi.HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Patient not found.",
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Found {subject_df.height} patients.",
     )
 
 

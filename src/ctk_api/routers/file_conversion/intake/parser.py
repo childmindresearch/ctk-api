@@ -263,6 +263,10 @@ class Education:
             )
         )
         self.school_type = descriptors.SchoolType(patient_data["schooltype"])
+        self.classroom_type = transformers.ClassroomType(
+            descriptors.ClassroomType(patient_data["classroomtype"]),
+            other=patient_data["classroomtype_other"],
+        )
         self.past_schools = transformers.PastSchools(
             [
                 transformers.PastSchoolInterface(
@@ -289,7 +293,7 @@ class Development:
         )
         self.delivery = transformers.BirthDelivery(patient_data["opt_delivery"])
         self.delivery_location = transformers.DeliveryLocation(
-            patient_data["birth_location"],
+            descriptors.DeliveryLocation(patient_data["birth_location"]),
             patient_data["birth_other"],
         )
 
@@ -304,7 +308,9 @@ class Development:
         )
         self.premature_birth = bool(patient_data["premature"])
         self.premature_birth_specify = patient_data["premature_specify"]
-        self.adaptability = transformers.Adaptability(patient_data["infanttemp_adapt"])
+        self.adaptability = transformers.Adaptability(
+            descriptors.Adaptability(patient_data["infanttemp_adapt"]),
+        )
         self.soothing_difficulty = descriptors.SoothingDifficulty(
             patient_data["infanttemp1"],
         )
@@ -380,6 +386,39 @@ class FamilyPyshicatricHistory:
         """
         self.is_father_history_known = bool(patient_data["biohx_dad_other"])
         self.is_mother_history_known = bool(patient_data["biohx_mom_other"])
+        self.family_diagnoses = self.get_family_diagnoses(patient_data)
+
+    def get_family_diagnoses(
+        self,
+        patient_data: dict[str, Any],
+    ) -> transformers.FamilyDiagnoses:
+        """Gets the family diagnoses.
+
+        There's an edge-case where the complete family history is unknown.
+        REDCap defaults to True for diagnoses in this case, but this is
+        undesired.
+
+        Args:
+            patient_data: The patient dataframe.
+
+        Returns:
+            The family diagnoses transformers.
+        """
+        if not self.is_father_history_known and not self.is_mother_history_known:
+            history_known = "Family psychiatric history is unknown."
+            return transformers.FamilyDiagnoses(
+                [],
+                history_known,
+            )
+
+        if not self.is_father_history_known:
+            history_known = "Family history for the father is unknown."
+        elif not self.is_mother_history_known:
+            history_known = "Family history for the mother is unknown."
+
+        else:
+            history_known = ""
+
         family_diagnoses = [
             descriptors.FamilyPsychiatricHistory(
                 diagnosis=diagnosis.name,
@@ -391,7 +430,10 @@ class FamilyPyshicatricHistory:
             )
             for diagnosis in descriptors.family_psychiatric_diagnoses
         ]
-        self.family_diagnoses = transformers.FamilyDiagnoses(family_diagnoses)
+        return transformers.FamilyDiagnoses(
+            family_diagnoses,
+            history_known,
+        )
 
 
 class TherapeuticInterventions:
