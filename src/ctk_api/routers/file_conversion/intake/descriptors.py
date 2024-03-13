@@ -64,6 +64,23 @@ class SchoolType(enum.Enum):
     other = 9
 
 
+class ClassroomType(enum.Enum):
+    """The type of classroom the patient is in.
+
+    To make the names legal for Python enums, but also compliant with the REDCap form,
+    classroom types starting with a number have an underscore prepended. and
+    colons have been replaced with "COLON".
+    """
+
+    general_education = 1
+    integrated = 2
+    self_contained = 3
+    _12COLON1COLON1 = 4
+    _12COLON1COLON4 = 5
+    _8COLON1COLON1 = 6
+    other = 7
+
+
 class IndividualizedEducationProgram(enum.Enum):
     """The type of education program the patient is in."""
 

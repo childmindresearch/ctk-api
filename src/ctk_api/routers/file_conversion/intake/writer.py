@@ -153,6 +153,7 @@ class ReportWriter:
         handedness = patient.handedness.transform()
         iep = patient.education.individualized_educational_program.transform()
         past_diagnoses = patient.psychiatric_history.past_diagnoses.transform()
+        classroom = patient.education.classroom_type.transform()
         concerns = f'"{patient.concerns}"' if patient.concerns else PLACEHOLDER
         referral = f'"{patient.referral}"' if patient.referral else PLACEHOLDER
         desired_outcome = (
@@ -166,17 +167,16 @@ class ReportWriter:
         texts = [
             f"""
             At the time of enrollment, {patient.preferred_name} was a
-            {patient.age}-year-old, {handedness} {patient.age_gender_label} with
-            {past_diagnoses}. {patient.preferred_name} was placed in a
+            {patient.age}-year-old, {handedness} {patient.age_gender_label}
+            {past_diagnoses}. {patient.preferred_name} was placed in a {classroom}
             {patient.education.grade}""",
-            f"{grade_superscript} ",
+            f"{grade_superscript} ",  # Superscript
             f"""
-            {patient.education.school_type.name} school grade
-             classroom at
+            grade {patient.education.school_type.name} school classroom at
             {patient.education.school_name}. {patient.preferred_name} {iep}.
             {patient.preferred_name} and {patient.pronouns[2]}
-            {patient.guardian.relationship}, Mr./Ms./Mrs.
-            {patient.guardian.first_name} {patient.guardian.last_name}, attended
+            {patient.guardian.relationship},
+            {patient.guardian.full_name}, attended
             the present evaluation due to concerns regarding {concerns}. The
             family is hoping for {desired_outcome}. The family learned of the
             study through {referral}.

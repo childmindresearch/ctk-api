@@ -3,7 +3,6 @@ import dataclasses
 import tempfile
 
 import pytest
-import pytest_mock
 from fastapi import status, testclient
 from pytest_mock import plugin
 
@@ -76,7 +75,6 @@ def test_anonymization_endpoint(
 
 @pytest.mark.usefixtures("_mock_openai_response")
 def test_summarization_endpoint_new(
-    mocker: plugin.MockerFixture,
     client: testclient.TestClient,
     endpoints: conftest.Endpoints,
 ) -> None:
@@ -95,7 +93,6 @@ def test_summarization_endpoint_new(
 
 @pytest.mark.usefixtures("_mock_openai_response")
 def test_summarization_endpoint_exists(
-    mocker: pytest_mock.MockFixture,
     client: testclient.TestClient,
     endpoints: conftest.Endpoints,
 ) -> None:
