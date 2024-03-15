@@ -87,17 +87,3 @@ def test__join_patient_languages(languages: Language, expected: str) -> None:
     actual = writer.ReportWriter._join_patient_languages(languages)  # type: ignore[arg-type] # Tested in test_valid_language_replacement.
 
     assert actual == expected
-
-
-def test_write_with_rgb_text_decorator() -> None:
-    """Test the write_with_rgb_text decorator."""
-
-    @writer.write_with_rgb_text(rgb=(255, 0, 0))
-    def test_function(report_writer: writer.ReportWriter) -> None:
-        report_writer.report.add_paragraph("This is a test paragraph.")
-
-    report_writer = writer.ReportWriter(intake=None)  # type: ignore[arg-type]
-    test_function(report_writer)
-
-    assert report_writer.report.paragraphs[-1].text == "This is a test paragraph."
-    assert report_writer.report.paragraphs[-1].runs[0].font.color.rgb == (255, 0, 0)

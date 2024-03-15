@@ -26,11 +26,6 @@ class IntakeInformation:
         self.patient = Patient(patient_data, timezone=timezone)
         self.phone = patient_data["phone"]
 
-        self.referral = patient_data["referral2"]
-        self.concerns = patient_data["concern_current"]
-        self.concerns_start = str(patient_data["concerns_begin"])
-        self.desired_outcome = patient_data["outcome2"]
-
 
 class Patient:
     """The patient model."""
@@ -182,7 +177,7 @@ class Guardian:
         if any(keyword in self.relationship.lower() for keyword in male_keywords):
             return "Mr."
         if any(keyword in self.relationship.lower() for keyword in female_keywords):
-            return "Ms./Mrs"
+            return "Ms./Mrs."
         return "Mr./Ms./Mrs."
 
     @property
@@ -395,72 +390,10 @@ class PsychiatricHistory:
         self.children_services = transformers.ChildrenServices(
             patient_data["acs_exp"],
         )
-        self.family_psychiatric_history = FamilyPyshicatricHistory(patient_data)
         self.violence_and_trauma = transformers.ViolenceAndTrauma(
             patient_data["violence_exp"],
         )
         self.self_harm = transformers.SelfHarm(patient_data["selfharm_exp"])
-
-
-class FamilyPyshicatricHistory:
-    """The parser for the patient's family's psychiatric history."""
-
-    def __init__(self, patient_data: dict[str, Any]) -> None:
-        """Initializes the psychiatric history.
-
-        Args:
-            patient_data: The patient dataframe.
-        """
-        self.is_father_history_known = bool(patient_data["biohx_dad_other"])
-        self.is_mother_history_known = bool(patient_data["biohx_mom_other"])
-        self.family_diagnoses = self.get_family_diagnoses(patient_data)
-
-    def get_family_diagnoses(
-        self,
-        patient_data: dict[str, Any],
-    ) -> transformers.FamilyDiagnoses:
-        """Gets the family diagnoses.
-
-        There's an edge-case where the complete family history is unknown.
-        REDCap defaults to True for diagnoses in this case, but this is
-        undesired.
-
-        Args:
-            patient_data: The patient dataframe.
-
-        Returns:
-            The family diagnoses transformers.
-        """
-        if not self.is_father_history_known and not self.is_mother_history_known:
-            history_known = "Family psychiatric history is unknown."
-            return transformers.FamilyDiagnoses(
-                [],
-                history_known,
-            )
-
-        if not self.is_father_history_known:
-            history_known = "Family history for the father is unknown."
-        elif not self.is_mother_history_known:
-            history_known = "Family history for the mother is unknown."
-
-        else:
-            history_known = ""
-
-        family_diagnoses = [
-            descriptors.FamilyPsychiatricHistory(
-                diagnosis=diagnosis.name,
-                no_formal_diagnosis=patient_data[
-                    f"{diagnosis.checkbox_abbreviation}___4"
-                ]
-                == "1",
-                family_members=patient_data[f"{diagnosis.text_abbreviation}_text"],
-            )
-            for diagnosis in descriptors.family_psychiatric_diagnoses
-        ]
-        return transformers.FamilyDiagnoses(
-            family_diagnoses,
-            history_known,
-        )
 
 
 class TherapeuticInterventions:

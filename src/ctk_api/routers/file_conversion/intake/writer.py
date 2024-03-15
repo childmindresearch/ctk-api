@@ -455,17 +455,21 @@ class ReportWriter:
     def write_family_psychiatric_history(self) -> None:
         """Writes the family psychiatric history to the report."""
         patient = self.intake.patient
-        family_psychiatric_history = (
-            patient.psychiatric_history.family_psychiatric_history
-        )
-        diagnosis_text = family_psychiatric_history.family_diagnoses
-
-        text = str(diagnosis_text)
+        text = f"""
+        {patient.first_name}'s family history is largely unremarkable for
+        psychiatric illnesses. {patient.guardian.title_name} denied any family
+        history related to homicidality, suicidality, depression, bipolar
+        disorder, attention-deficit/hyperactivity disorder, autism spectrum
+        disorder, learning disorders, psychotic disorders, eating disorders,
+        oppositional defiant or conduct disorders, substance abuse, panic,
+        generalized anxiety, or obsessive-compulsive disorders. Information
+        regarding {patient.first_name}'s family psychiatric history was
+        deferred."""
         text = utils.remove_excess_whitespace(text)
 
         heading = self.report.add_heading("Family Psychiatric History", level=2)
         report = self.report.add_paragraph(text)
-        utils.format_paragraphs((heading, report), font_rgb=RGB_INTAKE)
+        utils.format_paragraphs((heading, report), font_rgb=RGB_TEMPLATE)
 
     def write_past_therapeutic_interventions(self) -> None:
         """Writes the past therapeutic history to the report."""
