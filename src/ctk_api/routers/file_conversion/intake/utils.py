@@ -2,6 +2,7 @@
 import dataclasses
 import re
 import warnings
+from collections.abc import Iterable
 
 import docx
 import fastapi
@@ -277,12 +278,12 @@ class DocxReplace:
                 break
 
 
-def format_paragraph(  # noqa: PLR0913
-    paragraph: docx_paragraph.Paragraph,
+def format_paragraphs(  # noqa: PLR0913
+    paragraph: docx_paragraph.Paragraph | Iterable[docx_paragraph.Paragraph],
     *,
     line_spacing: float | None = None,
-    spacing_before: float | None = None,
-    spacing_after: float | None = None,
+    space_before: float | None = None,
+    space_after: float | None = None,
     bold: bool | None = None,
     italics: bool | None = None,
     font_size: int | None = None,
@@ -294,8 +295,8 @@ def format_paragraph(  # noqa: PLR0913
     Args:
         paragraph: The paragraph to format.
         line_spacing: The line spacing of the paragraph.
-        spacing_before: The spacing before the paragraph.
-        spacing_after: The spacing after the paragraph.
+        space_before: The spacing before the paragraph.
+        space_after: The spacing after the paragraph.
         bold: Whether to bold the paragraph.
         italics: Whether to italicize the paragraph.
         italics: Whether to italicize the paragraph.
@@ -303,35 +304,65 @@ def format_paragraph(  # noqa: PLR0913
         font_rgb: The font color of the paragraph.
         alignment: The alignment of the paragraph.
     """
-    if line_spacing is not None:
-        paragraph.paragraph_format.line_spacing = line_spacing
+    if isinstance(paragraph, docx_paragraph.Paragraph):
+        paragraph = [paragraph]
 
-    if alignment is not None:
-        paragraph.alignment = alignment
+    for para in paragraph:
+        if line_spacing is not None:
+            para.paragraph_format.line_spacing = line_spacing
 
-    if spacing_before is not None:
-        paragraph.paragraph_format.space_before = spacing_before
+        if alignment is not None:
+            para.alignment = alignment
 
-    if spacing_after is not None:
-        paragraph.paragraph_format.space_after = spacing_after
+        if space_before is not None:
+            para.paragraph_format.space_before = space_before
 
-    for run in paragraph.runs:
-        if bold is not None:
-            run.bold = bold
-        if italics is not None:
-            run.italic = italics
-        if font_size is not None:
-            run.font.size = font_size
-        if font_rgb is not None:
-            run.font.color.rgb = docx.shared.RGBColor(*font_rgb)
+        if space_after is not None:
+            para.paragraph_format.space_after = space_after
+
+        for run in para.runs:
+            format_run(
+                run,
+                bold=bold,
+                italics=italics,
+                font_size=font_size,
+                font_rgb=font_rgb,
+            )
+
+
+def format_run(
+    run: docx.text.run.Run,
+    *,
+    bold: bool | None = None,
+    italics: bool | None = None,
+    font_size: int | None = None,
+    font_rgb: tuple[int, int, int] | None = None,
+) -> None:
+    """Formats a run in a Word document.
+
+    Args:
+        run: The run to format.
+        bold: Whether to bold the run.
+        italics: Whether to italicize the run.
+        font_size: The font size of the run.
+        font_rgb: The font color of the run.
+    """
+    if bold is not None:
+        run.bold = bold
+    if italics is not None:
+        run.italic = italics
+    if font_size is not None:
+        run.font.size = font_size
+    if font_rgb is not None:
+        run.font.color.rgb = docx.shared.RGBColor(*font_rgb)
 
 
 def format_cell(  # noqa: PLR0913, D417
     cell: table._Cell,
     *,
     line_spacing: float | None = None,
-    spacing_before: float | None = None,
-    spacing_after: float | None = None,
+    space_before: float | None = None,
+    space_after: float | None = None,
     bold: bool | None = None,
     italics: bool | None = None,
     font_size: int | None = None,
@@ -344,8 +375,8 @@ def format_cell(  # noqa: PLR0913, D417
     Args:
         cell: The cell to format.
         line_spacing: The line spacing of the cell.
-        spacing_before: The spacing before the cell.
-        spacing_after: The spacing after the cell.
+        space_before: The spacing before the cell.
+        space_after: The spacing after the cell.
         bold: Whether to bold the cell.
         italics: Whether to italicize the cell.
         font_size: The font size of the cell.
@@ -353,7 +384,7 @@ def format_cell(  # noqa: PLR0913, D417
         background_rgb: The background color of the cell.
     """
     for para in cell.paragraphs:
-        format_paragraph(
+        format_paragraphs(
             para,
             line_spacing=line_spacing,
             bold=bold,
@@ -361,8 +392,8 @@ def format_cell(  # noqa: PLR0913, D417
             font_size=font_size,
             font_rgb=font_rgb,
             alignment=alignment,
-            spacing_after=spacing_after,
-            spacing_before=spacing_before,
+            space_after=space_after,
+            space_before=space_before,
         )
 
     if background_rgb is not None:

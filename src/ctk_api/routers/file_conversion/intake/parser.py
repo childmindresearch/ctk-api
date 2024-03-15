@@ -26,6 +26,11 @@ class IntakeInformation:
         self.patient = Patient(patient_data, timezone=timezone)
         self.phone = patient_data["phone"]
 
+        self.referral = patient_data["referral2"]
+        self.concerns = patient_data["concern_current"]
+        self.concerns_start = str(patient_data["concerns_begin"])
+        self.desired_outcome = patient_data["outcome2"]
+
 
 class Patient:
     """The patient model."""
@@ -57,11 +62,6 @@ class Patient:
             descriptors.Handedness(patient_data["dominant_hand"]),
         )
 
-        self.referral = patient_data["referral2"]
-        self.concerns = patient_data["concern_current"]
-        self.concerns_start = str(patient_data["concerns_begin"])
-        self.desired_outcome = patient_data["outcome2"]
-
         self.psychiatric_history = PsychiatricHistory(patient_data)
 
         self.languages = [
@@ -71,7 +71,7 @@ class Patient:
         ]
         self.language_spoken_best = descriptors.Language(
             patient_data["language_spoken"],
-        ).name
+        ).name.replace("_", " ")
         if self.language_spoken_best == "other":
             self.language_spoken_best = patient_data["language_spoken_other"]
         self.education = Education(patient_data)
@@ -85,11 +85,6 @@ class Patient:
         if self.nickname:
             return f'{self.first_name} "{self.nickname}" {self.last_name}'
         return f"{self.first_name} {self.last_name}"
-
-    @property
-    def preferred_name(self) -> str:
-        """The preferred name of the patient."""
-        return self.nickname if self.nickname else self.first_name
 
     @property
     def gender(self) -> str:
@@ -162,9 +157,41 @@ class Guardian:
             ).name.replace("_", " ")
 
     @property
-    def full_name(self) -> str:
+    def title_name(self) -> str:
         """The full name of the guardian."""
-        return f"{self.first_name} {self.last_name}"
+        return f"{self.title} {self.last_name}"
+
+    @property
+    def title_full_name(self) -> str:
+        """The full name of the guardian."""
+        return f"{self.title} {self.first_name} {self.last_name}"
+
+    @property
+    def title(self) -> str:
+        """The title of the guardian.
+
+        We scan for more keywords than are available in the descriptor to attempt
+        to catch some of the "other" cases.
+
+        Returns:
+            str: The title of the guardian based on their inferred gender.
+        """
+        female_keywords = ["mother", "aunt", "carrier", "sister"]
+        male_keywords = ["father", "uncle", "brother"]
+
+        if any(keyword in self.relationship.lower() for keyword in male_keywords):
+            return "Mr."
+        if any(keyword in self.relationship.lower() for keyword in female_keywords):
+            return "Ms./Mrs"
+        return "Mr./Ms./Mrs."
+
+    @property
+    def parent_or_guardian(self) -> str:
+        """The parent or guardian."""
+        parent_keywords = ["mother", "father"]
+        if any(keyword in self.relationship.lower() for keyword in parent_keywords):
+            return "parent"
+        return "guardian"
 
 
 class Household:
@@ -187,7 +214,7 @@ class Household:
 
         self.state = descriptors.USState(int(patient_data["state"])).name
         self.languages = [
-            descriptors.Language(identifier).name
+            descriptors.Language(identifier).name.replace("_", " ")
             for identifier in range(1, 25)
             if patient_data[f"language___{identifier}"] == "1"
         ]

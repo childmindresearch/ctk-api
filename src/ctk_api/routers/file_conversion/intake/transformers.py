@@ -185,6 +185,10 @@ class DurationOfPregnancy(Transformer[str]):
     def transform(self) -> str:
         """Transforms the time of pregnancy information to a string.
 
+        Though most guardians answer with just a number, the field is a freeform string.
+        This transformer attempts to wrangle the data into a consistent format of
+        "X weeks", but will return to the quoted original string if it can't.
+
         Returns:
             str: The transformed object.
         """
@@ -193,6 +197,11 @@ class DurationOfPregnancy(Transformer[str]):
         try:
             duration_of_pregnancy = float(self.base)
         except ValueError:
+            parts = self.base.split()
+            if len(parts) == 2 and parts[0].isnumeric() and parts[1].lower() == "weeks":  # noqa: PLR2004
+                # Common edge case: guardian writes "40 weeks".
+                # This doesn't need additional quotes.
+                return self.base.lower()
             return f'"{self.base}"'
         return f"{duration_of_pregnancy:g} weeks"
 
@@ -384,7 +393,7 @@ class PastDiagnoses(MultiTransformer[descriptors.PastDiagnosis]):
             )
 
         return (
-            "who was diagnosed with the following psychiatric diagnoses: "
+            "was diagnosed with the following psychiatric diagnoses: "
             + utils.join_with_oxford_comma(
                 [
                     f"{val.diagnosis} at {val.age} by {val.clinician}"
@@ -443,6 +452,7 @@ class FamilyDiagnoses(MultiTransformer[descriptors.FamilyPsychiatricHistory]):
             else:
                 text += f"Family history of {no_past_diagnosis[0].diagnosis} was denied"
             text += "."
+
         return text
 
     @staticmethod

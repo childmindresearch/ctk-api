@@ -16,7 +16,7 @@ def test_guardian_parser(
 
     assert guardian.first_name == test_redcap_data["guardian_first_name"]
     assert guardian.last_name == test_redcap_data["guardian_last_name"]
-    assert guardian.full_name == f"{guardian.first_name} {guardian.last_name}"
+    assert guardian.title_name == f"{guardian.first_name} {guardian.last_name}"
     assert guardian.relationship == expected_relationship
 
 

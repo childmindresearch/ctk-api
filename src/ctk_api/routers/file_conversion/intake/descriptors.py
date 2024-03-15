@@ -253,8 +253,8 @@ class Language(enum.Enum):
 
     English = 1
     Spanish = 2
-    Chinese_Mandarin = 3
-    Chinese_Cantonese = 4
+    Mandarin = 3
+    Cantonese = 4
     French = 5
     Haitian_Creole = 6
     Russian = 7

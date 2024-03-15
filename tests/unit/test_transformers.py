@@ -583,6 +583,7 @@ def test_guardian_marital_status_transformer(
         ("", "unspecified"),
         ("42", "42 weeks"),
         ("42.5", "42.5 weeks"),
+        ("40 weeks", "40 weeks"),
         ("9 months", '"9 months"'),
         ("non$en$e", '"non$en$e"'),
     ],

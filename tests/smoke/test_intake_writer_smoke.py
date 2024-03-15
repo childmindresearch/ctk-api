@@ -15,7 +15,7 @@ import pytest
 from ctk_api.routers.file_conversion.intake import parser, writer
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def intake_document(
     test_redcap_data: dict[str, Any],
 ) -> Generator[docx.Document, None, None]:
