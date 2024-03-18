@@ -6,15 +6,17 @@ matches and transform method for each transformer. Each transformer should
 be callable from the transform method alone, with the matches method being
 used internally.
 """
+
 import abc
 import dataclasses
 import enum
-from typing import Generic, TypeVar
+from typing import Generic, Protocol, TypeVar
 
 import fastapi
 from fastapi import status
 
-from ctk_api.routers.file_conversion.intake import descriptors, utils
+from ctk_api.routers.file_conversion.intake import descriptors
+from ctk_api.routers.file_conversion.intake.utils import string_utils
 
 T = TypeVar("T")
 
@@ -24,6 +26,7 @@ class ReplacementTags(str, enum.Enum):
 
     PREFERRED_NAME = "{{PREFERRED_NAME}}"
     REPORTING_GUARDIAN = "{{REPORTING_GUARDIAN}}"
+    PRONOUN_2 = "{{PRONOUN_2}}"
 
 
 class Transformer(Generic[T], abc.ABC):
@@ -140,17 +143,6 @@ class BirthComplications(
 
         """
         super().__init__([descriptors.BirthComplications(val) for val in value], other)
-        if (
-            descriptors.BirthComplications.none_of_the_above in self.base
-            and len(self.base) > 1
-        ):
-            raise fastapi.HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "Birth complications 'none of the above' cannot be combined with "
-                    "other birth complications."
-                ),
-            )
 
     def transform(self) -> str:
         """Transforms the birth complications information to a string.
@@ -158,6 +150,12 @@ class BirthComplications(
         Returns:
             str: The transformed object.
         """
+        if (
+            descriptors.BirthComplications.none_of_the_above in self.base
+            and len(self.base) > 1
+        ):
+            return """MANUAL INTERVENTION REQUIRED: 'None of the above' should not
+            be selected with other birth complications."""
         if descriptors.BirthComplications.none_of_the_above in self.base:
             return "no birth complications"
 
@@ -174,8 +172,11 @@ class BirthComplications(
                 names.append(val.name.replace("_", " "))
         if len(names) == 1:
             return f"the following birth complication: {names[0]}"
-        return "the following birth complications: " + utils.join_with_oxford_comma(
-            names,
+        return (
+            "the following birth complications: "
+            + string_utils.join_with_oxford_comma(
+                names,
+            )
         )
 
 
@@ -347,7 +348,7 @@ class PastSchools(MultiTransformer[PastSchoolInterface]):
         if len(self.base) == 0:
             return "no prior history of schools"
         substrings = [f"{val.name} (grades: {val.grades})" for val in self.base]
-        return "attended the following schools: " + utils.join_with_oxford_comma(
+        return "attended the following schools: " + string_utils.join_with_oxford_comma(
             substrings,
         )
 
@@ -388,13 +389,13 @@ class PastDiagnoses(MultiTransformer[descriptors.PastDiagnosis]):
             return "with no prior history of psychiatric diagnoses"
 
         if short:
-            return "with a prior history of " + utils.join_with_oxford_comma(
+            return "with a prior history of " + string_utils.join_with_oxford_comma(
                 [val.diagnosis for val in self.base],
             )
 
         return (
             "was diagnosed with the following psychiatric diagnoses: "
-            + utils.join_with_oxford_comma(
+            + string_utils.join_with_oxford_comma(
                 [
                     f"{val.diagnosis} at {val.age} by {val.clinician}"
                     for val in self.base
@@ -415,6 +416,69 @@ class HouseholdRelationship(Transformer[descriptors.HouseholdRelationship]):
         if self.base == descriptors.HouseholdRelationship.other_relative:
             return self.other if self.other else "unspecified relationship"
         return self.base.name.replace("_", " ")
+
+
+class HouseholdMemberInterface(Protocol):
+    """Interface for household members.
+
+    Needed to prevent circular import from parsers.
+    """
+
+    name: str
+    age: str
+    relationship: str
+    relationship_quality: str
+    grade_occupation: str
+
+
+class HouseholdMembers(MultiTransformer[HouseholdMemberInterface]):
+    """The transformer for household members."""
+
+    def transform(self) -> str:
+        """Transforms the household member information to a string.
+
+        Returns:
+            str: The transformed object.
+        """
+        if len(self.base) == 0:
+            return "no other household members"
+
+        member_strings = [
+            self.household_member_to_string(member) for member in self.base
+        ]
+
+        return string_utils.join_with_oxford_comma(member_strings)
+
+    def household_member_to_string(self, member: HouseholdMemberInterface) -> str:
+        """Converts a household member to a string representation.
+
+        Clinical staff prefers to only use the name of the parents, and only include
+        occupation for those who are not students. We use age as a proxy for this.
+
+        Args:
+            member: The HouseholdMemberInterface object to convert.
+
+        Returns:
+            The string representation of the household member.
+
+        """
+        string = f"{ReplacementTags.PRONOUN_2.name} {member.relationship}"
+        is_parent = any(
+            parent in member.relationship.lower() for parent in ["father", "mother"]
+        )
+        if is_parent:
+            string += f" {member.name}"
+        member_properties = [
+            str(member.age),
+            member.relationship_quality + " relationship",
+        ]
+
+        age = string_utils.StringToInt().parse(member.age)
+        if (isinstance(age, int) and age > 21) or isinstance(age, str):  # noqa: PLR2004
+            member_properties.append(member.grade_occupation.lower())
+
+        string += f" ({', '.join(member_properties)})"
+        return string
 
 
 class ViolenceAndTrauma(Transformer[str]):

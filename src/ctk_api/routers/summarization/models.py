@@ -1,4 +1,5 @@
 """Models for the diagnoses router."""
+
 import sqlalchemy
 from sqlalchemy import orm
 

@@ -1,4 +1,5 @@
 """Basic settings for all SQL tables."""
+
 import datetime
 
 import sqlalchemy

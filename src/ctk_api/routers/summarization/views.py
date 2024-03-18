@@ -1,4 +1,5 @@
 """View definitions for the summarization router."""
+
 import logging
 
 import fastapi

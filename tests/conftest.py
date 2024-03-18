@@ -1,4 +1,5 @@
 """Configurations for all tests."""
+
 import dataclasses
 import pathlib
 import tempfile
@@ -10,7 +11,7 @@ import pytest
 from sqlalchemy import orm
 
 from ctk_api.microservices import sql
-from ctk_api.routers.file_conversion.intake import utils
+from ctk_api.routers.file_conversion.intake import parser
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -63,5 +64,5 @@ def test_redcap_data(data_dir: pathlib.Path) -> dict[str, Any]:
     class FastApiUploadFileMimic:
         file = data_dir / "test_redcap_data.csv"
 
-    data_frame = utils.read_subject_row(FastApiUploadFileMimic, 1)  # type: ignore[arg-type]
+    data_frame = parser.read_subject_row(FastApiUploadFileMimic, 1)  # type: ignore[arg-type]
     return data_frame.row(0, named=True)

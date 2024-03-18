@@ -1,11 +1,97 @@
 """Utilities for the file conversion router."""
-import datetime
+
 import math
+import warnings
 from typing import Any
 
+import fastapi
+import polars as pl
 import pytz
+from dateutil import parser as dateutil_parser
+from fastapi import status
 
 from ctk_api.routers.file_conversion.intake import descriptors, transformers
+
+
+def read_subject_row(
+    csv_file: fastapi.UploadFile,
+    redcap_survey_identifier: str,
+) -> pl.DataFrame:
+    """Reads the subject row from the intake CSV file.
+
+    All variables are interpreted as strings unless explicitly specified otherwise as
+    the REDCap .csv is too inconsistent in its typing to rely on automated detection.
+
+    Args:
+        csv_file: The intake CSV file.
+        redcap_survey_identifier: The REDCap survey identifier for the intake form.
+
+    Returns:
+        The subject row.
+
+    Raises:
+        HTTPException: If the subject is not found.
+    """
+    dtypes = {
+        "age": pl.Float32,
+        "biohx_dad_other": pl.Int8,
+        "biohx_mom_other": pl.Int8,
+        "birth_location": pl.Int8,
+        "child_language1_fluency": pl.Int8,
+        "child_language2_fluency": pl.Int8,
+        "child_language3_fluency": pl.Int8,
+        "childgender": pl.Int8,
+        "classroomtype": pl.Int8,
+        "dominant_hand": pl.Int8,
+        "guardian_maritalstatus": pl.Int8,
+        "guardian_relationship___1": pl.Int8,
+        "iep": pl.Int8,
+        "infanttemp_adapt": pl.Int8,
+        "infanttemp1": pl.Int8,
+        "language_spoken": pl.Int8,
+        "opt_delivery": pl.Int8,
+        "residing_number": pl.Int8,
+        "pronouns": pl.Int8,
+        "schooltype": pl.Int8,
+    }
+
+    faulty_people_in_home = 2
+    for index in range(1, 11):
+        dtypes[f"peopleinhome{index}_relation"] = pl.Int8
+        if index != faulty_people_in_home:
+            dtypes[f"peopleinhome{index}_relationship"] = pl.Int8
+        else:
+            dtypes["peopleinhome_relationship"] = pl.Int8
+
+    for index in range(1, 13):
+        dtypes[f"guardian_relationship___{index}"] = pl.Int8
+
+    with warnings.catch_warnings():
+        # File only exists in memory; ignore this warning.
+        warnings.filterwarnings(
+            "ignore",
+            message=(
+                "Polars found a filename. Ensure you pass a path to the file "
+                "instead of a python file object when possible for best "
+                "performance."
+            ),
+        )
+        intake_df = pl.read_csv(
+            csv_file.file,
+            infer_schema_length=0,
+            dtypes=dtypes,
+        )
+
+    subject_df = intake_df.filter(
+        intake_df["redcap_survey_identifier"] == redcap_survey_identifier,
+    )
+    if subject_df.height == 1:
+        return subject_df
+
+    raise fastapi.HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Found {subject_df.height} patients.",
+    )
 
 
 class IntakeInformation:
@@ -45,9 +131,8 @@ class Patient:
         self.last_name = patient_data["lastname"]
         self.nickname = patient_data["othername"]
         self.age = math.floor(patient_data["age"])
-        self.date_of_birth = datetime.datetime.strptime(
+        self.date_of_birth = dateutil_parser.parse(
             patient_data["dob"],
-            "%Y-%m-%d",
         ).replace(tzinfo=pytz.timezone(timezone))
         self._gender_enum = descriptors.Gender(patient_data["childgender"]).name
         self._gender_other = patient_data["childgender_other"]
@@ -143,9 +228,19 @@ class Guardian:
         """
         self.first_name = patient_data["guardian_first_name"]
         self.last_name = patient_data["guardian_last_name"]
-        relationship_id = patient_data["guardian_relationship___1"]
+        relationship_id = next(
+            (
+                identifier
+                for identifier in range(1, 13)
+                if patient_data[f"guardian_relationship___{identifier}"]
+            ),
+            descriptors.GuardianRelationship.other.value,
+        )
+
         if relationship_id == descriptors.GuardianRelationship.other.value:
-            self.relationship = patient_data["other_relation"]
+            self.relationship = (
+                patient_data["other_relation"] or "no relationship provided"
+            )
         else:
             self.relationship = descriptors.GuardianRelationship(
                 relationship_id,
@@ -199,15 +294,18 @@ class Household:
             patient_data: The patient dataframe.
         """
         n_members = patient_data["residing_number"]
-        self.members = [
-            HouseholdMember(patient_data, i) for i in range(1, n_members + 1)
-        ]
+        self.members = transformers.HouseholdMembers(
+            [HouseholdMember(patient_data, i) for i in range(1, n_members + 1)],
+        )
         self.guardian_marital_status = descriptors.GuardianMaritalStatus(
             patient_data["guardian_maritalstatus"],
         ).name
         self.city = patient_data["city"]
 
-        self.state = descriptors.USState(int(patient_data["state"])).name
+        self.state = descriptors.USState(int(patient_data["state"])).name.replace(
+            "_",
+            " ",
+        )
         self.languages = [
             descriptors.Language(identifier).name.replace("_", " ")
             for identifier in range(1, 25)
