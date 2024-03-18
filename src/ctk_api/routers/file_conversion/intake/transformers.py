@@ -6,6 +6,7 @@ matches and transform method for each transformer. Each transformer should
 be callable from the transform method alone, with the matches method being
 used internally.
 """
+
 import abc
 import dataclasses
 import enum

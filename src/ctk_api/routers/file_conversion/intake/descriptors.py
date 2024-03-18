@@ -1,4 +1,5 @@
 """Contains descriptors of the columns of the REDCap intake form."""
+
 import enum
 
 import pydantic

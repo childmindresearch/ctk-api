@@ -1,4 +1,5 @@
 """View definitions for the diagnoses router."""
+
 import logging
 
 import fastapi

@@ -1,4 +1,5 @@
 """Utilities for the intake parser."""
+
 import dataclasses
 import re
 import warnings

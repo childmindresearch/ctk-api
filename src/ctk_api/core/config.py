@@ -1,4 +1,5 @@
 """Settings for the API."""
+
 import functools
 import logging
 import pathlib

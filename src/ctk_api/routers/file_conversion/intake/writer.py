@@ -1,4 +1,5 @@
 """Contains report writing functionality for intake information."""
+
 import functools
 import itertools
 import tempfile

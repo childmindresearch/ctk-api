@@ -1,4 +1,5 @@
 """Unit tests for the middleware module."""
+
 import logging
 
 import fastapi

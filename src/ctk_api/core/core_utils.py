@@ -1,4 +1,5 @@
 """Utility functions for the CTK API."""
+
 import logging
 import pathlib
 import tempfile
@@ -29,10 +30,13 @@ def markdown_text_as_docx_response(
     Returns:
         The response with the docx file.
     """
-    with tempfile.NamedTemporaryFile(
-        suffix=".docx",
-        delete=False,
-    ) as output_file, tempfile.NamedTemporaryFile(suffix=".md") as markdown_file:
+    with (
+        tempfile.NamedTemporaryFile(
+            suffix=".docx",
+            delete=False,
+        ) as output_file,
+        tempfile.NamedTemporaryFile(suffix=".md") as markdown_file,
+    ):
         markdown_file.write(markdown_text.encode("utf-8"))
         markdown_file.seek(0)
         pypandoc.convert_file(

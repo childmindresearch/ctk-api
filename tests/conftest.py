@@ -1,4 +1,5 @@
 """Configurations for all tests."""
+
 import dataclasses
 import pathlib
 import tempfile

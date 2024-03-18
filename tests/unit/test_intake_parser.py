@@ -1,4 +1,5 @@
 """Unit tests for the intake form parser."""
+
 from typing import Any
 
 from ctk_api.routers.file_conversion.intake import descriptors, parser
@@ -24,9 +25,9 @@ def test_guardian_parser_other_relationship(
     test_redcap_data: dict[str, Any],
 ) -> None:
     """Tests the Guardian intake form parser with an 'other' relationship."""
-    test_redcap_data[
-        "guardian_relationship___1"
-    ] = descriptors.GuardianRelationship.other.value
+    test_redcap_data["guardian_relationship___1"] = (
+        descriptors.GuardianRelationship.other.value
+    )
     test_redcap_data["other_relation"] = "xkcd"
 
     guardian = parser.Guardian(test_redcap_data)

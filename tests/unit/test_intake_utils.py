@@ -1,4 +1,5 @@
 """Tests for the intake writer module."""
+
 import pathlib
 
 import docx

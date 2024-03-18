@@ -1,4 +1,5 @@
 """Middleware for the FastAPI application."""
+
 import logging
 import uuid
 

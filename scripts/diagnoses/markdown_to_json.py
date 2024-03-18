@@ -7,6 +7,7 @@ file to JSON and write it to the output file.
 This script was built and with Python 3.11, but as it relies only on the Python
 standard library, it should work with any version of Python 3.
 """  # noqa: INP001
+
 from __future__ import annotations
 
 import json
