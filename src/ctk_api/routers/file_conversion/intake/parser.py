@@ -299,7 +299,7 @@ class Household:
         )
         self.guardian_marital_status = descriptors.GuardianMaritalStatus(
             patient_data["guardian_maritalstatus"],
-        ).name
+        ).name.replace("_", " ")
         self.city = patient_data["city"]
 
         self.state = descriptors.USState(int(patient_data["state"])).name.replace(
@@ -411,7 +411,10 @@ class Development:
         self.duration_of_pregnancy = transformers.DurationOfPregnancy(
             patient_data["txt_duration_preg_num"],
         )
-        self.delivery = transformers.BirthDelivery(patient_data["opt_delivery"])
+        self.delivery = transformers.BirthDelivery(
+            patient_data["opt_delivery"],
+            other=patient_data["csection_reason"],
+        )
         self.delivery_location = transformers.DeliveryLocation(
             descriptors.DeliveryLocation(patient_data["birth_location"]),
             patient_data["birth_other"],

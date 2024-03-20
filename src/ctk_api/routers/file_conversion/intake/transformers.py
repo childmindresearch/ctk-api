@@ -220,7 +220,9 @@ class BirthDelivery(Transformer[descriptors.BirthDelivery]):
             return "an unknown type of delivery"
         if self.base == descriptors.BirthDelivery.vaginal:
             return "a vaginal delivery"
-        return "a cesarean section"
+
+        other = self.other if self.other else "unspecified"
+        return f'a cesarean section due to "{other}"'
 
 
 class DeliveryLocation(Transformer[descriptors.DeliveryLocation]):
@@ -462,7 +464,7 @@ class HouseholdMembers(MultiTransformer[HouseholdMemberInterface]):
             The string representation of the household member.
 
         """
-        string = f"{ReplacementTags.PRONOUN_2.name} {member.relationship}"
+        string = f"{ReplacementTags.PRONOUN_2.value} {member.relationship}"
         is_parent = any(
             parent in member.relationship.lower() for parent in ["father", "mother"]
         )
@@ -492,10 +494,13 @@ class ViolenceAndTrauma(Transformer[str]):
         """
         if not self.base:
             return (
-                "{{REPORTING_GUARDIAN}} denied any history of violence or trauma for "
-                "{{PREFERRED_NAME}}."
+                f"{ReplacementTags.REPORTING_GUARDIAN.value} denied any history of "
+                f"violence or trauma for {ReplacementTags.PREFERRED_NAME.value}."
             )
-        return "{{REPORTING_GUARDIAN}} reported that " + f'"{self.base}".'
+        return (
+            f"{ReplacementTags.REPORTING_GUARDIAN.value} reported that "
+            f'"{self.base}".'
+        )
 
 
 class AggressiveBehavior(Transformer[str]):
@@ -509,11 +514,14 @@ class AggressiveBehavior(Transformer[str]):
         """
         if not self.base:
             return (
-                "{{REPORTING_GUARDIAN}} denied any history of homicidality or "
-                "severe physically aggressive behaviors towards others for "
-                "{{PREFERRED_NAME}}."
+                f"{ReplacementTags.REPORTING_GUARDIAN.value} denied any history of "
+                "homicidality or severe physically aggressive behaviors towards others "
+                f"for {ReplacementTags.PREFERRED_NAME.value}."
             )
-        return "{{REPORTING_GUARDIAN}} reported that " + f'"{self.base}".'
+        return (
+            f"{ReplacementTags.REPORTING_GUARDIAN.value} reported that "
+            f'"{self.base}".'
+        )
 
 
 class ChildrenServices(Transformer[str]):
@@ -527,10 +535,13 @@ class ChildrenServices(Transformer[str]):
         """
         if not self.base:
             return (
-                "{{REPORTING_GUARDIAN}} denied any history of ACS involvement for "
-                "{{PREFERRED_NAME}}."
+                f"{ReplacementTags.REPORTING_GUARDIAN.value} denied any history of ACS "
+                f"involvement for {ReplacementTags.PREFERRED_NAME.value}."
             )
-        return "{{REPORTING_GUARDIAN}} reported that " + f'"{self.base}".'
+        return (
+            f"{ReplacementTags.REPORTING_GUARDIAN.value} reported that "
+            f'"{self.base}".'
+        )
 
 
 class SelfHarm(Transformer[str]):
@@ -544,7 +555,8 @@ class SelfHarm(Transformer[str]):
         """
         if not self.base:
             return (
-                "{{REPORTING_GUARDIAN}} denied any history of serious self-injurious"
-                " harm or suicidal ideation for {{PREFERRED_NAME}}"
+                f"{ReplacementTags.REPORTING_GUARDIAN.value} denied any history of "
+                "serious self-injurious harm or suicidal ideation for "
+                f"{ReplacementTags.PREFERRED_NAME.value}"
             )
-        return "{{REPORTING_GUARDIAN}} reported that " + f'"{self.base}".'
+        return f'{ReplacementTags.REPORTING_GUARDIAN.value} reported that "{self.base}"'
