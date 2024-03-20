@@ -107,26 +107,6 @@ class DocxReplace:
                 break
 
 
-def insert_image_before(
-    paragraph: docx_paragraph.Paragraph,
-    image_path: str | pathlib.Path,
-    width: int | None = None,
-    height: int | None = None,
-) -> docx_paragraph.Paragraph:
-    """Insert an image before a paragraph.
-
-    Args:
-        paragraph: The paragraph to insert before.
-        image_path: The path to the image to insert.
-        width: The width of the image.
-        height: The height of the image.
-    """
-    new_paragraph = insert_paragraph_before(paragraph, "")
-    run = new_paragraph.add_run()
-    run.add_picture(str(image_path), width=width, height=height)
-    return new_paragraph
-
-
 def insert_paragraph_after(
     paragraph: docx_paragraph,
     text: str,
@@ -170,6 +150,26 @@ def insert_paragraph_before(
     new_paragraph.add_run(text)
     if style is not None:
         new_paragraph.style = style
+    return new_paragraph
+
+
+def insert_image_before(
+    paragraph: docx_paragraph.Paragraph,
+    image_path: str | pathlib.Path,
+    width: int | None = None,
+    height: int | None = None,
+) -> docx_paragraph.Paragraph:
+    """Insert an image before a paragraph.
+
+    Args:
+        paragraph: The paragraph to insert before.
+        image_path: The path to the image to insert.
+        width: The width of the image.
+        height: The height of the image.
+    """
+    new_paragraph = insert_paragraph_before(paragraph, "")
+    run = new_paragraph.add_run()
+    run.add_picture(str(image_path), width=width, height=height)
     return new_paragraph
 
 

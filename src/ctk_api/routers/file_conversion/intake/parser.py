@@ -412,7 +412,7 @@ class Development:
             patient_data["txt_duration_preg_num"],
         )
         self.delivery = transformers.BirthDelivery(
-            patient_data["opt_delivery"],
+            descriptors.BirthDelivery(patient_data["opt_delivery"]),
             other=patient_data["csection_reason"],
         )
         self.delivery_location = transformers.DeliveryLocation(

@@ -2,7 +2,6 @@
 
 import enum
 import itertools
-from typing import ParamSpec, TypeVar
 
 import docx
 from docx.enum import table as enum_table
@@ -16,9 +15,6 @@ from ctk_api.routers.file_conversion.intake.utils import (
     language_utils,
     string_utils,
 )
-
-P = ParamSpec("P")
-T = TypeVar("T")
 
 DATA_DIR = config.DATA_DIR
 RGB_INTAKE = (178, 161, 199)
@@ -69,6 +65,7 @@ class ReportWriter:
         self.write_medical_history()
         self.write_current_psychiatric_functioning()
         self.add_page_break()
+
         self.replace_patient_information()
         self.apply_corrections()
         self.add_signatures()
@@ -85,6 +82,7 @@ class ReportWriter:
             "pronoun_1": self.intake.patient.pronouns[1],
             "pronoun_2": self.intake.patient.pronouns[2],
             "pronoun_4": self.intake.patient.pronouns[4],
+            "placeholder": PLACEHOLDER,
         }
 
         for template, replacement in replacements.items():
