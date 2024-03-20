@@ -92,6 +92,30 @@ def test_find_replace_overflow(
     )
 
 
+def test_insert_paragraph_after() -> None:
+    """Tests inserting a paragraph after another paragraph."""
+    document = docx.Document()
+    paragraph = document.add_paragraph("This is the first paragraph.")
+    document.add_paragraph("This is the second paragraph.")
+
+    docx_utils.insert_paragraph_after(paragraph, "This is the new paragraph.")
+
+    assert document.paragraphs[0].text == "This is the first paragraph."
+    assert document.paragraphs[1].text == "This is the new paragraph."
+    assert document.paragraphs[2].text == "This is the second paragraph."
+
+
+def test_insert_paragraph_before() -> None:
+    """Tests inserting a paragraph before another paragraph."""
+    document = docx.Document()
+    paragraph = document.add_paragraph("This is the first paragraph.")
+
+    docx_utils.insert_paragraph_before(paragraph, "This is the new paragraph.")
+
+    assert document.paragraphs[0].text == "This is the new paragraph."
+    assert document.paragraphs[1].text == "This is the first paragraph."
+
+
 @pytest.mark.parametrize(
     ("rgb", "hexadecimal"),
     [

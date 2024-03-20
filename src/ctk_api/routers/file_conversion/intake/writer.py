@@ -1,13 +1,13 @@
 """Contains report writing functionality for intake information."""
 
+import enum
 import itertools
-import tempfile
 from typing import ParamSpec, TypeVar
 
 import docx
 from docx.enum import table as enum_table
 from docx.enum import text as enum_text
-from docxcompose import composer
+from docx.text import paragraph as docx_paragraph
 
 from ctk_api.core import config
 from ctk_api.routers.file_conversion.intake import descriptors, parser
@@ -27,6 +27,16 @@ RGB_TEMPLATE = (247, 150, 70)
 PLACEHOLDER = "______"
 
 
+class Style(enum.Enum):
+    """The styles for the report."""
+
+    HEADING_1 = "Heading 1"
+    HEADING_2 = "Heading 2"
+    HEADING_3 = "Heading 3"
+    TITLE = "Title"
+    NORMAL = "Normal"
+
+
 class ReportWriter:
     """Writes a report for intake information."""
 
@@ -38,12 +48,16 @@ class ReportWriter:
         """
         self.intake = intake
         self.report = docx.Document(DATA_DIR / "report_template.docx")
-        self.report_mental_status_examination = docx.Document(
-            DATA_DIR / "report_template_mental_status_examination.docx",
+        self.insert_before = next(
+            paragraph
+            for paragraph in self.report.paragraphs
+            if "MENTAL STATUS EXAMINATION AND TESTING BEHAVIORAL OBSERVATIONS"
+            in paragraph.text
         )
-        self.report_closing_statement = docx.Document(
-            DATA_DIR / "report_template_closing_statement.docx",
-        )
+
+        if not self.insert_before:
+            msg = "Insertion point not found in the report template."
+            raise ValueError(msg)
 
     def transform(self) -> None:
         """Transforms the intake information to a report."""
@@ -55,12 +69,9 @@ class ReportWriter:
         self.write_medical_history()
         self.write_current_psychiatric_functioning()
         self.add_page_break()
-        self.write_mental_status_examination()
-        self.write_dsm_5_diagnoses()
-        self.write_recommendations()
-        self.write_closing_statement()
         self.replace_patient_information()
         self.apply_corrections()
+        self.add_signatures()
 
     def replace_patient_information(self) -> None:
         """Replaces the patient information in the report."""
@@ -116,15 +127,15 @@ class ReportWriter:
         ]
         texts = [string_utils.remove_excess_whitespace(text) for text in texts]
 
-        heading = self.report.add_heading("REASON FOR VISIT", level=1)
-        paragraph = self.report.add_paragraph(texts[0])
+        heading = self._insert("REASON FOR VISIT", Style.HEADING_1)
+        paragraph = self._insert(texts[0])
         paragraph.add_run(texts[1]).font.superscript = True
         paragraph.add_run(" " + texts[2])
         docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_INTAKE)
 
     def write_developmental_history(self) -> None:
         """Writes the developmental history to the end of the report."""
-        heading = self.report.add_heading("DEVELOPMENTAL HISTORY", level=1)
+        heading = self._insert("DEVELOPMENTAL HISTORY", Style.HEADING_1)
         docx_utils.format_paragraphs(heading, font_rgb=RGB_INTAKE)
         self.write_prenatal_history()
         self.write_developmental_milestones()
@@ -150,8 +161,8 @@ class ReportWriter:
         """
         text = string_utils.remove_excess_whitespace(text)
 
-        heading = self.report.add_heading("Prenatal and Birth History", level=2)
-        paragraph = self.report.add_paragraph(text)
+        heading = self._insert("Prenatal and Birth History", Style.HEADING_2)
+        paragraph = self._insert(text)
         docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_INTAKE)
 
     def write_developmental_milestones(self) -> None:
@@ -172,8 +183,8 @@ class ReportWriter:
         """
         text = string_utils.remove_excess_whitespace(text)
 
-        heading = self.report.add_heading("Developmental Milestones", level=2)
-        paragraph = self.report.add_paragraph(text)
+        heading = self._insert("Developmental Milestones", Style.HEADING_2)
+        paragraph = self._insert(text)
         docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_INTAKE)
 
     def write_early_education(self) -> None:
@@ -191,13 +202,13 @@ class ReportWriter:
         """
         text = string_utils.remove_excess_whitespace(text)
 
-        heading = self.report.add_heading("Early Educational Interventions", level=2)
-        paragraph = self.report.add_paragraph(text)
+        heading = self._insert("Early Educational Interventions", Style.HEADING_2)
+        paragraph = self._insert(text)
         docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_INTAKE)
 
     def write_academic_history(self) -> None:
         """Writes the academic history to the end of the report."""
-        heading = self.report.add_heading("ACADEMIC AND EDUCATIONAL HISTORY", level=1)
+        heading = self._insert("ACADEMIC AND EDUCATIONAL HISTORY", Style.HEADING_1)
         docx_utils.format_paragraphs(heading, font_rgb=RGB_INTAKE)
         self.write_previous_testing()
         self.write_academic_history_table()
@@ -215,13 +226,13 @@ class ReportWriter:
         """
         text = string_utils.remove_excess_whitespace(text)
 
-        heading = self.report.add_heading("Previous Testing", level=2)
-        paragraph = self.report.add_paragraph(text)
+        heading = self._insert("Previous Testing", Style.HEADING_2)
+        paragraph = self._insert(text)
         docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_TEMPLATE)
 
     def write_academic_history_table(self) -> None:
         """Writes the academic history table to the report."""
-        paragraph = self.report.add_paragraph("Name, Date of Assessment")
+        paragraph = self._insert("Name, Date of Assessment")
         docx_utils.format_paragraphs(
             paragraph,
             font_rgb=RGB_INTAKE,
@@ -230,6 +241,7 @@ class ReportWriter:
         )
 
         table = self.report.add_table(7, 4)
+        self.insert_before._p.addprevious(table._tbl)  # noqa: SLF001
         table.style = "Table Grid"
         header_row = table.rows[0].cells
 
@@ -310,18 +322,18 @@ class ReportWriter:
             string_utils.remove_excess_whitespace(text) for text in texts_current
         ]
 
-        heading = self.report.add_heading("Educational History", level=2)
-        prior_paragraph = self.report.add_paragraph(text_prior)
+        heading = self._insert("Educational History", Style.HEADING_2)
+        prior_paragraph = self._insert(text_prior)
         docx_utils.format_paragraphs((heading, prior_paragraph), font_rgb=RGB_INTAKE)
 
-        current_paragraph = self.report.add_paragraph(texts_current[0])
+        current_paragraph = self._insert(texts_current[0])
         current_paragraph.add_run(texts_current[1]).font.superscript = True
         current_paragraph.add_run(" " + texts_current[2])
         docx_utils.format_paragraphs(current_paragraph, font_rgb=RGB_TEMPLATE)
 
     def write_social_history(self) -> None:
         """Writes the social history to the end of the report."""
-        heading = self.report.add_heading("SOCIAL HISTORY", level=1)
+        heading = self._insert("SOCIAL HISTORY", Style.HEADING_1)
         docx_utils.format_paragraphs(heading, font_rgb=RGB_INTAKE)
         self.write_home_and_adaptive_functioning()
         self.write_social_functioning()
@@ -355,9 +367,9 @@ class ReportWriter:
         text_home = string_utils.remove_excess_whitespace(text_home)
         text_adaptive = string_utils.remove_excess_whitespace(text_adaptive)
 
-        heading = self.report.add_heading("Home and Adaptive Functioning", level=2)
-        home_paragraph = self.report.add_paragraph(text_home)
-        adaptive_paragraph = self.report.add_paragraph(text_adaptive)
+        heading = self._insert("Home and Adaptive Functioning", Style.HEADING_2)
+        home_paragraph = self._insert(text_home)
+        adaptive_paragraph = self._insert(text_adaptive)
 
         docx_utils.format_paragraphs((heading, home_paragraph), font_rgb=RGB_INTAKE)
         docx_utils.format_paragraphs(adaptive_paragraph, font_rgb=RGB_TEMPLATE)
@@ -379,13 +391,13 @@ class ReportWriter:
         """
         text = string_utils.remove_excess_whitespace(text)
 
-        heading = self.report.add_heading("Social Functioning", level=2)
-        paragraph = self.report.add_paragraph(text)
+        heading = self._insert("Social Functioning", Style.HEADING_2)
+        paragraph = self._insert(text)
         docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_INTAKE)
 
     def write_psychiatric_history(self) -> None:
         """Writes the psychiatric history to the end of the report."""
-        heading = self.report.add_heading("PSYCHRIATIC HISTORY", level=1)
+        heading = self._insert("PSYCHRIATIC HISTORY", Style.HEADING_1)
         docx_utils.format_paragraphs(heading, font_rgb=RGB_INTAKE)
         self.write_past_psychriatic_diagnoses()
         self.write_past_psychiatric_hospitalizations()
@@ -405,8 +417,8 @@ class ReportWriter:
         """
         text = string_utils.remove_excess_whitespace(text)
 
-        heading = self.report.add_heading("Past Psychiatric Hospitalizations", level=2)
-        paragraph = self.report.add_paragraph(text)
+        heading = self._insert("Past Psychiatric Hospitalizations", Style.HEADING_2)
+        paragraph = self._insert(text)
         docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_TEMPLATE)
 
     def administration_for_childrens_services_involvement(self) -> None:
@@ -416,11 +428,11 @@ class ReportWriter:
         text = str(patient.psychiatric_history.children_services)
         text = string_utils.remove_excess_whitespace(text)
 
-        heading = self.report.add_heading(
+        heading = self._insert(
             "Administration for Children's Services (ACS) Involvement",
-            level=2,
+            Style.HEADING_2,
         )
-        paragraph = self.report.add_paragraph(text)
+        paragraph = self._insert(text)
         docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_INTAKE)
 
     def write_past_aggressive_behaviors_and_homicidality(self) -> None:
@@ -430,11 +442,11 @@ class ReportWriter:
         text = str(patient.psychiatric_history.aggresive_behaviors)
         text = string_utils.remove_excess_whitespace(text)
 
-        heading = self.report.add_heading(
+        heading = self._insert(
             "Past Severe Aggressive Behaviors and Homicidality",
-            level=2,
+            Style.HEADING_2,
         )
-        report = self.report.add_paragraph(text)
+        report = self._insert(text)
         docx_utils.format_paragraphs((heading, report), font_rgb=RGB_INTAKE)
 
     def write_past_psychriatic_diagnoses(self) -> None:
@@ -449,8 +461,8 @@ class ReportWriter:
         """
         text = string_utils.remove_excess_whitespace(text)
 
-        heading = self.report.add_heading("Past Psychiatric Diagnoses", level=2)
-        report = self.report.add_paragraph(text)
+        heading = self._insert("Past Psychiatric Diagnoses", Style.HEADING_2)
+        report = self._insert(text)
         docx_utils.format_paragraphs((heading, report), font_rgb=RGB_INTAKE)
 
     def write_family_psychiatric_history(self) -> None:
@@ -468,8 +480,8 @@ class ReportWriter:
         deferred."""
         text = string_utils.remove_excess_whitespace(text)
 
-        heading = self.report.add_heading("Family Psychiatric History", level=2)
-        report = self.report.add_paragraph(text)
+        heading = self._insert("Family Psychiatric History", Style.HEADING_2)
+        report = self._insert(text)
         docx_utils.format_paragraphs((heading, report), font_rgb=RGB_TEMPLATE)
 
     def write_past_therapeutic_interventions(self) -> None:
@@ -500,8 +512,8 @@ class ReportWriter:
 
         texts = [string_utils.remove_excess_whitespace(text) for text in texts]
 
-        heading = self.report.add_heading("Past Therapeutic Interventions", level=2)
-        paragraphs = [self.report.add_paragraph(text) for text in texts]
+        heading = self._insert("Past Therapeutic Interventions", Style.HEADING_2)
+        paragraphs = [self._insert(text) for text in texts]
         docx_utils.format_paragraphs((heading, *paragraphs), font_rgb=RGB_INTAKE)
 
     def write_past_self_injurious_behaviors_and_suicidality(self) -> None:
@@ -511,11 +523,11 @@ class ReportWriter:
         text = str(patient.psychiatric_history.self_harm)
         text = string_utils.remove_excess_whitespace(text)
 
-        heading = self.report.add_heading(
+        heading = self._insert(
             "Past Self-Injurious Behaviors and Suicidality",
-            level=2,
+            Style.HEADING_2,
         )
-        paragraph = self.report.add_paragraph(text)
+        paragraph = self._insert(text)
         docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_INTAKE)
 
     def expose_to_violence_and_trauma(self) -> None:
@@ -525,8 +537,8 @@ class ReportWriter:
         text = str(patient.psychiatric_history.violence_and_trauma)
         text = string_utils.remove_excess_whitespace(text)
 
-        heading = self.report.add_heading("Exposure to Violence and Trauma", level=2)
-        paragraph = self.report.add_paragraph(text)
+        heading = self._insert("Exposure to Violence and Trauma", Style.HEADING_2)
+        paragraph = self._insert(text)
         docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_INTAKE)
 
     def write_medical_history(self) -> None:
@@ -544,8 +556,8 @@ class ReportWriter:
         """
         text = string_utils.remove_excess_whitespace(text)
 
-        heading = self.report.add_heading("MEDICAL HISTORY", level=1)
-        paragraph = self.report.add_paragraph(text)
+        heading = self._insert("MEDICAL HISTORY", Style.HEADING_1)
+        paragraph = self._insert(text)
         docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_TEMPLATE)
 
     def write_clinical_summary_and_impressions(self) -> None:
@@ -562,37 +574,8 @@ class ReportWriter:
         """
         text = string_utils.remove_excess_whitespace(text)
 
-        heading = self.report.add_heading("CLINICAL SUMMARY AND IMPRESSIONS", level=1)
-        paragraph = self.report.add_paragraph(text)
-        docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_TESTING)
-
-    def write_recommendations(self) -> None:
-        """Writes the recommendations to the report."""
-        text = """
-            Based on the results of the evaluation, the following recommendations are
-            provided:
-        """
-        text = string_utils.remove_excess_whitespace(text)
-
-        level_2_headings = [
-            "Further Evaluation",
-            "Academics and Learning",
-            "Psychotherapy",
-            "Psychopharmacology",
-        ]
-        heading = self.report.add_heading("RECOMMENDATIONS", level=1)
-        text = self.report.add_paragraph(text)
-        paragraphs = [
-            self.report.add_paragraph(heading) for heading in level_2_headings
-        ]
-        docx_utils.format_paragraphs((heading, text, *paragraphs), font_rgb=RGB_TESTING)
-
-    def write_dsm_5_diagnoses(self) -> None:
-        """Writes the DSM-5 diagnoses to the report."""
-        text = "Code\t\tDisorder Name"
-
-        heading = self.report.add_heading("DSM-5 Diagnoses", level=1)
-        paragraph = self.report.add_paragraph(text)
+        heading = self._insert("CLINICAL SUMMARY AND IMPRESSIONS", Style.HEADING_1)
+        paragraph = self._insert(text)
         docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_TESTING)
 
     def write_current_psychiatric_functioning(self) -> None:
@@ -601,7 +584,7 @@ class ReportWriter:
         Note: this section mixes color codings. Color decorators are applied
         to the called functions instead.
         """
-        heading = self.report.add_heading("CURRENT PSYCHIATRIC FUNCTIONING", level=1)
+        heading = self._insert("CURRENT PSYCHIATRIC FUNCTIONING", Style.HEADING_1)
         docx_utils.format_paragraphs(heading, font_rgb=RGB_INTAKE)
         self.write_current_psychiatric_medications_intake()
         self.write_current_psychiatric_medications_testing()
@@ -618,8 +601,8 @@ class ReportWriter:
         """
         text = string_utils.remove_excess_whitespace(text)
 
-        heading = self.report.add_heading("Current Psychiatric Medications", level=2)
-        paragraph = self.report.add_paragraph(text)
+        heading = self._insert("Current Psychiatric Medications", Style.HEADING_2)
+        paragraph = self._insert(text)
         docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_INTAKE)
 
     def write_current_psychiatric_medications_testing(self) -> None:
@@ -643,7 +626,7 @@ class ReportWriter:
         ]
         texts = [string_utils.remove_excess_whitespace(text) for text in texts]
 
-        paragraph = self.report.add_paragraph(texts[0])
+        paragraph = self._insert(texts[0])
         paragraph.add_run(texts[1])
         paragraph.runs[-1].bold = True
         paragraph.add_run(texts[2])
@@ -661,29 +644,8 @@ class ReportWriter:
         """
         text = string_utils.remove_excess_whitespace(text)
 
-        paragraph = self.report.add_paragraph(text)
+        paragraph = self._insert(text)
         docx_utils.format_paragraphs(paragraph, font_rgb=RGB_TESTING)
-
-    def write_mental_status_examination(self) -> None:
-        """Writes the mental status examination to the report."""
-        compose = composer.Composer(self.report)
-        compose.append(self.report_mental_status_examination)
-
-        with tempfile.NamedTemporaryFile(suffix=".docx") as docx_file:
-            compose.save(docx_file.name)
-            self.report = docx.Document(docx_file.name)
-
-    def write_closing_statement(self) -> None:
-        """Writes the closing statement to the report.
-
-        This is done by merging two documents. We use composer because
-        python-docx is not great for copying images.
-        """
-        composer_obj = composer.Composer(self.report)
-        composer_obj.append(self.report_closing_statement)
-        with tempfile.NamedTemporaryFile(suffix=".docx") as docx_file:
-            composer_obj.save(docx_file.name)
-            self.report = docx.Document(docx_file.name)
 
     def apply_corrections(self) -> None:
         """Applies various grammatical and styling corrections."""
@@ -694,10 +656,61 @@ class ReportWriter:
         )
         document_corrector.correct()
 
+    def add_signatures(self) -> None:
+        """Adds the signatures to the report.
+
+        Michael Milham's signature is placed in a different location than the
+        other signatures. As such, it needs some custom handling.
+        """
+        signature_dir = DATA_DIR / "signatures"
+        for signature in signature_dir.glob("*.png"):
+            name = signature.stem.replace("_", " ")
+            paragraph_index = next(
+                index
+                for index in range(len(self.report.paragraphs))
+                if self.report.paragraphs[index].text.lower().startswith(name)
+            )
+
+            if name != "michael p. milham":
+                # All signatures except for Michael P. Milham's are inserted
+                # on above a underlined paragraph one before the one that contains
+                # the name.
+                paragraph_index -= 1
+
+            image_paragraph = docx_utils.insert_image_before(
+                self.report.paragraphs[paragraph_index],
+                signature,
+            )
+            if name != "michael p. milham":
+                docx_utils.insert_paragraph_before(image_paragraph, "")
+
     def add_page_break(self) -> None:
         """Adds a page break to the report."""
-        run = self.report.paragraphs[-1].add_run()
-        run.add_break(enum_text.WD_BREAK.PAGE)
+        paragraph = self._insert("")
+        paragraph.add_run().add_break(enum_text.WD_BREAK.PAGE)
+
+    def _insert(
+        self,
+        text: str,
+        style: Style = Style.NORMAL,
+    ) -> docx_paragraph.Paragraph:
+        """Inserts text at the insertion point.
+
+        Given the current structure of the report, text insertions only occur
+        in one location.
+
+        Args:
+            text: The text to insert.
+            style: The style of the text.
+
+        Returns:
+            The new paragraph.
+        """
+        return docx_utils.insert_paragraph_before(
+            self.insert_before,
+            text,
+            style=style.value,
+        )
 
     @staticmethod
     def _join_patient_languages(languages: list[parser.Language]) -> str:
