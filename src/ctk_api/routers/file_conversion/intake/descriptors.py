@@ -1,4 +1,5 @@
 """Contains descriptors of the columns of the REDCap intake form."""
+
 import enum
 
 import pydantic
@@ -253,8 +254,8 @@ class Language(enum.Enum):
 
     English = 1
     Spanish = 2
-    Chinese_Mandarin = 3
-    Chinese_Cantonese = 4
+    Mandarin = 3
+    Cantonese = 4
     French = 5
     Haitian_Creole = 6
     Russian = 7
@@ -460,20 +461,3 @@ family_psychiatric_diagnoses = [
         text_abbreviation="tt",
     ),
 ]
-
-
-class FamilyPsychiatricHistory(pydantic.BaseModel):
-    """The model for the patient's family psychiatric history."""
-
-    diagnosis: str
-    no_formal_diagnosis: bool
-    family_members: list[str]
-
-    @pydantic.field_validator("family_members", mode="before")
-    def split_comma_separated_values(cls, value: str | list[str] | None) -> list[str]:  # noqa: N805
-        """Splits comma separated values."""
-        if isinstance(value, list):
-            return [string.lower() for string in value]
-        if value is None:
-            return []
-        return value.lower().split(",")

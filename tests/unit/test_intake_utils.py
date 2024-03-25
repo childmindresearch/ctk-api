@@ -1,10 +1,15 @@
 """Tests for the intake writer module."""
+
 import pathlib
 
 import docx
 import pytest
 
-from ctk_api.routers.file_conversion.intake import utils
+from ctk_api.routers.file_conversion.intake.utils import (
+    docx_utils,
+    language_utils,
+    string_utils,
+)
 
 
 def test_find_replace_replaces_text(
@@ -12,7 +17,7 @@ def test_find_replace_replaces_text(
 ) -> None:
     """Tests finding and replacing text in a Word document."""
     document = docx.Document(data_dir / "find_replace_test.docx")
-    replace = utils.DocxReplace(document)
+    replace = docx_utils.DocxReplace(document)
 
     replace.replace("This is a header", "header_replace")
     replace.replace("This is a footer", "footer_replace")
@@ -38,7 +43,7 @@ def test_find_replace_maintains_style(
 ) -> None:
     """Tests finding and replacing text maintains the style."""
     document = docx.Document(data_dir / "find_replace_test.docx")
-    replace = utils.DocxReplace(document)
+    replace = docx_utils.DocxReplace(document)
 
     replace.replace("This is a header", "header_replace")
     replace.replace("This is a footer", "footer_replace")
@@ -59,7 +64,7 @@ def test_find_replace_maintains_custom_styling(
     Note: all lines in the test file start with a bolded word.
     """
     document = docx.Document(data_dir / "find_replace_test.docx")
-    replace = utils.DocxReplace(document)
+    replace = docx_utils.DocxReplace(document)
 
     replace.replace("This is a header", "header_replace")
     replace.replace("This is a footer", "footer_replace")
@@ -77,7 +82,7 @@ def test_find_replace_overflow(
 ) -> None:
     """Tests that find and replace does not remove additional text."""
     document = docx.Document(data_dir / "find_replace_test.docx")
-    replace = utils.DocxReplace(document)
+    replace = docx_utils.DocxReplace(document)
 
     replace.replace("This is a paragraph", "paragraph_replace")
 
@@ -85,6 +90,30 @@ def test_find_replace_overflow(
         replace.document.paragraphs[1].text
         == "Paragraph: paragraph_replace with overflow."
     )
+
+
+def test_insert_paragraph_after() -> None:
+    """Tests inserting a paragraph after another paragraph."""
+    document = docx.Document()
+    paragraph = document.add_paragraph("This is the first paragraph.")
+    document.add_paragraph("This is the second paragraph.")
+
+    docx_utils.insert_paragraph_after(paragraph, "This is the new paragraph.")
+
+    assert document.paragraphs[0].text == "This is the first paragraph."
+    assert document.paragraphs[1].text == "This is the new paragraph."
+    assert document.paragraphs[2].text == "This is the second paragraph."
+
+
+def test_insert_paragraph_before() -> None:
+    """Tests inserting a paragraph before another paragraph."""
+    document = docx.Document()
+    paragraph = document.add_paragraph("This is the first paragraph.")
+
+    docx_utils.insert_paragraph_before(paragraph, "This is the new paragraph.")
+
+    assert document.paragraphs[0].text == "This is the new paragraph."
+    assert document.paragraphs[1].text == "This is the first paragraph."
 
 
 @pytest.mark.parametrize(
@@ -112,7 +141,7 @@ def test_rgb_to_hex(
     hexadecimal: str,
 ) -> None:
     """Tests converting RGB to hex."""
-    assert utils.rgb_to_hex(*rgb) == hexadecimal
+    assert docx_utils.rgb_to_hex(*rgb) == hexadecimal
 
 
 @pytest.mark.parametrize(
@@ -127,7 +156,7 @@ def test_rgb_to_hex(
 )
 def test_join_with_oxford_comma(elements: list[str], expected: str) -> None:
     """Tests joining a list with an Oxford comma."""
-    assert utils.join_with_oxford_comma(elements) == expected
+    assert string_utils.join_with_oxford_comma(elements) == expected
 
 
 @pytest.mark.parametrize(
@@ -153,7 +182,7 @@ def test_join_with_oxford_comma(elements: list[str], expected: str) -> None:
 )
 def test_ordinal_suffix(rank: int, suffix: str) -> None:
     """Tests getting the ordinal suffix of a number."""
-    assert utils.ordinal_suffix(rank) == suffix
+    assert string_utils.ordinal_suffix(rank) == suffix
 
 
 @pytest.mark.parametrize(
@@ -173,7 +202,7 @@ def test_ordinal_suffix(rank: int, suffix: str) -> None:
 )
 def correct_verb_conjugation(sentence: str, expected: str) -> None:
     """Tests whether the verb conjugations of they are corrected."""
-    obj = utils.DocumentCorrections(document="")
+    obj = language_utils.DocumentCorrections(document="")
     pairs = obj._find_subject_verb(sentence)
 
     for pair in pairs:
@@ -192,7 +221,7 @@ def test_remove_excess_whitespace() -> None:
     excess    whitespace.     """
     expected = "This is a test string with excess whitespace."
 
-    actual = utils.remove_excess_whitespace(test_text)
+    actual = string_utils.remove_excess_whitespace(test_text)
 
     assert actual == expected
 
@@ -203,13 +232,15 @@ def test_remove_excess_whitespace() -> None:
         ("1", 1),
         ("1st", 1),
         ("1 month", 1),
-        ("1.5", 2),
-        ("1.5 months", 2),
+        ("1.5", 1.5),
+        ("1.5 months", 1.5),
+        ("twenty five", 25),
+        ("5 months and 4 days", "5 months and 4 days"),
     ],
 )
-def test_string_to_int(string: str, expected: int) -> None:
+def test_string_to_int(string: str, expected: float) -> None:
     """Test the string_to_int method."""
-    actual = utils.string_to_int(string)
+    actual = string_utils.StringToInt().parse(string)
 
     assert actual == expected
-    assert isinstance(actual, int)
+    assert isinstance(actual, type(expected))

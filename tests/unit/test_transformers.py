@@ -1,4 +1,5 @@
 """Tests for the textual output of intake transformers."""
+
 import pytest
 
 from ctk_api.routers.file_conversion.intake import descriptors, transformers
@@ -67,28 +68,37 @@ def test_birth_complications_transformer(
 
 
 @pytest.mark.parametrize(
-    ("value", "expected"),
+    ("value", "expected", "other"),
     [
         (
             descriptors.BirthDelivery.unknown,
             "an unknown type of delivery",
+            None,
         ),
         (
             descriptors.BirthDelivery.vaginal,
             "a vaginal delivery",
+            None,
         ),
         (
             descriptors.BirthDelivery.cesarean,
-            "a cesarean section",
+            'a cesarean section due to "unspecified"',
+            None,
+        ),
+        (
+            descriptors.BirthDelivery.cesarean,
+            'a cesarean section due to "test reason"',
+            "test reason",
         ),
     ],
 )
 def test_birth_delivery_transformer(
     value: descriptors.BirthDelivery,
     expected: str,
+    other: str | None,
 ) -> None:
     """Test that the BirthDelivery transformer returns the expected strings."""
-    transformer = transformers.BirthDelivery(value)
+    transformer = transformers.BirthDelivery(value, other)
 
     assert str(transformer) == expected
 
@@ -290,7 +300,7 @@ def test_development_skill_transformer(
                 ),
             ],
             (
-                "who was diagnosed with the following psychiatric diagnoses: Anxiety "
+                "was diagnosed with the following psychiatric diagnoses: Anxiety "
                 "at 8 by Dr. Smith and Depression at 9 by Dr. Johnson"
             ),
             False,
@@ -353,94 +363,6 @@ def test_household_relationship_transformer(
 ) -> None:
     """Test that the HouseholdRelationship transformer returns the expected strings."""
     transformer = transformers.HouseholdRelationship(base, other)
-
-    assert str(transformer) == expected
-
-
-@pytest.mark.parametrize(
-    ("base", "expected"),
-    [
-        ([], ""),
-        (
-            [
-                descriptors.FamilyPsychiatricHistory(
-                    diagnosis="Anxiety",
-                    family_members=["Mother", "Father"],
-                    no_formal_diagnosis=False,
-                ),
-                descriptors.FamilyPsychiatricHistory(
-                    diagnosis="Depression",
-                    family_members=["Brother"],
-                    no_formal_diagnosis=False,
-                ),
-            ],
-            (
-                "{{PREFERRED_NAME}}'s family history is significant for Anxiety ("
-                "mother and father) and Depression (brother)."
-            ),
-        ),
-        (
-            [
-                descriptors.FamilyPsychiatricHistory(
-                    diagnosis="Anxiety",
-                    family_members=[],
-                    no_formal_diagnosis=False,
-                ),
-                descriptors.FamilyPsychiatricHistory(
-                    diagnosis="Depression",
-                    family_members=[],
-                    no_formal_diagnosis=False,
-                ),
-            ],
-            (
-                "{{PREFERRED_NAME}}'s family history is significant for "
-                "Anxiety and Depression."
-            ),
-        ),
-        (
-            [
-                descriptors.FamilyPsychiatricHistory(
-                    diagnosis="Anxiety",
-                    family_members=[],
-                    no_formal_diagnosis=True,
-                ),
-                descriptors.FamilyPsychiatricHistory(
-                    diagnosis="Depression",
-                    family_members=[],
-                    no_formal_diagnosis=True,
-                ),
-            ],
-            (
-                "Family history of the following diagnoses was denied: Anxiety and "
-                "Depression."
-            ),
-        ),
-        (
-            [
-                descriptors.FamilyPsychiatricHistory(
-                    diagnosis="Anxiety",
-                    family_members=[],
-                    no_formal_diagnosis=True,
-                ),
-                descriptors.FamilyPsychiatricHistory(
-                    diagnosis="Depression",
-                    family_members=["brother"],
-                    no_formal_diagnosis=False,
-                ),
-            ],
-            (
-                "{{PREFERRED_NAME}}'s family history is significant for Depression "
-                "(brother). Family history of Anxiety was denied."
-            ),
-        ),
-    ],
-)
-def test_family_diagnoses_transformer(
-    base: list[descriptors.FamilyPsychiatricHistory],
-    expected: str,
-) -> None:
-    """Test that the FamilyDiagnoses transformer returns the expected strings."""
-    transformer = transformers.FamilyDiagnoses(base)
 
     assert str(transformer) == expected
 
@@ -522,7 +444,7 @@ def test_children_services_transformer(base: str, expected: str) -> None:
             "",
             (
                 "{{REPORTING_GUARDIAN}} denied any history of serious self-injurious"
-                " harm or suicidal ideation for {{PREFERRED_NAME}}"
+                " harm or suicidal ideation for {{PREFERRED_NAME}}."
             ),
         ),
         (
@@ -583,6 +505,7 @@ def test_guardian_marital_status_transformer(
         ("", "unspecified"),
         ("42", "42 weeks"),
         ("42.5", "42.5 weeks"),
+        ("40 weeks", "40 weeks"),
         ("9 months", '"9 months"'),
         ("non$en$e", '"non$en$e"'),
     ],

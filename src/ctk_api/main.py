@@ -1,4 +1,5 @@
 """Main entrypoint for the API."""
+
 import contextlib
 import logging
 from collections.abc import AsyncGenerator

@@ -1,11 +1,97 @@
 """Utilities for the file conversion router."""
-import datetime
+
 import math
+import warnings
 from typing import Any
 
+import fastapi
+import polars as pl
 import pytz
+from dateutil import parser as dateutil_parser
+from fastapi import status
 
 from ctk_api.routers.file_conversion.intake import descriptors, transformers
+
+
+def read_subject_row(
+    csv_file: fastapi.UploadFile,
+    redcap_survey_identifier: str,
+) -> pl.DataFrame:
+    """Reads the subject row from the intake CSV file.
+
+    All variables are interpreted as strings unless explicitly specified otherwise as
+    the REDCap .csv is too inconsistent in its typing to rely on automated detection.
+
+    Args:
+        csv_file: The intake CSV file.
+        redcap_survey_identifier: The REDCap survey identifier for the intake form.
+
+    Returns:
+        The subject row.
+
+    Raises:
+        HTTPException: If the subject is not found.
+    """
+    dtypes = {
+        "age": pl.Float32,
+        "biohx_dad_other": pl.Int8,
+        "biohx_mom_other": pl.Int8,
+        "birth_location": pl.Int8,
+        "child_language1_fluency": pl.Int8,
+        "child_language2_fluency": pl.Int8,
+        "child_language3_fluency": pl.Int8,
+        "childgender": pl.Int8,
+        "classroomtype": pl.Int8,
+        "dominant_hand": pl.Int8,
+        "guardian_maritalstatus": pl.Int8,
+        "guardian_relationship___1": pl.Int8,
+        "iep": pl.Int8,
+        "infanttemp_adapt": pl.Int8,
+        "infanttemp1": pl.Int8,
+        "language_spoken": pl.Int8,
+        "opt_delivery": pl.Int8,
+        "residing_number": pl.Int8,
+        "pronouns": pl.Int8,
+        "schooltype": pl.Int8,
+    }
+
+    faulty_people_in_home = 2
+    for index in range(1, 11):
+        dtypes[f"peopleinhome{index}_relation"] = pl.Int8
+        if index != faulty_people_in_home:
+            dtypes[f"peopleinhome{index}_relationship"] = pl.Int8
+        else:
+            dtypes["peopleinhome_relationship"] = pl.Int8
+
+    for index in range(1, 13):
+        dtypes[f"guardian_relationship___{index}"] = pl.Int8
+
+    with warnings.catch_warnings():
+        # File only exists in memory; ignore this warning.
+        warnings.filterwarnings(
+            "ignore",
+            message=(
+                "Polars found a filename. Ensure you pass a path to the file "
+                "instead of a python file object when possible for best "
+                "performance."
+            ),
+        )
+        intake_df = pl.read_csv(
+            csv_file.file,
+            infer_schema_length=0,
+            dtypes=dtypes,
+        )
+
+    subject_df = intake_df.filter(
+        intake_df["redcap_survey_identifier"] == redcap_survey_identifier,
+    )
+    if subject_df.height == 1:
+        return subject_df
+
+    raise fastapi.HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Found {subject_df.height} patients.",
+    )
 
 
 class IntakeInformation:
@@ -45,9 +131,8 @@ class Patient:
         self.last_name = patient_data["lastname"]
         self.nickname = patient_data["othername"]
         self.age = math.floor(patient_data["age"])
-        self.date_of_birth = datetime.datetime.strptime(
+        self.date_of_birth = dateutil_parser.parse(
             patient_data["dob"],
-            "%Y-%m-%d",
         ).replace(tzinfo=pytz.timezone(timezone))
         self._gender_enum = descriptors.Gender(patient_data["childgender"]).name
         self._gender_other = patient_data["childgender_other"]
@@ -56,11 +141,6 @@ class Patient:
         self.handedness = transformers.Handedness(
             descriptors.Handedness(patient_data["dominant_hand"]),
         )
-
-        self.referral = patient_data["referral2"]
-        self.concerns = patient_data["concern_current"]
-        self.concerns_start = str(patient_data["concerns_begin"])
-        self.desired_outcome = patient_data["outcome2"]
 
         self.psychiatric_history = PsychiatricHistory(patient_data)
 
@@ -71,7 +151,7 @@ class Patient:
         ]
         self.language_spoken_best = descriptors.Language(
             patient_data["language_spoken"],
-        ).name
+        ).name.replace("_", " ")
         if self.language_spoken_best == "other":
             self.language_spoken_best = patient_data["language_spoken_other"]
         self.education = Education(patient_data)
@@ -85,11 +165,6 @@ class Patient:
         if self.nickname:
             return f'{self.first_name} "{self.nickname}" {self.last_name}'
         return f"{self.first_name} {self.last_name}"
-
-    @property
-    def preferred_name(self) -> str:
-        """The preferred name of the patient."""
-        return self.nickname if self.nickname else self.first_name
 
     @property
     def gender(self) -> str:
@@ -153,18 +228,60 @@ class Guardian:
         """
         self.first_name = patient_data["guardian_first_name"]
         self.last_name = patient_data["guardian_last_name"]
-        relationship_id = patient_data["guardian_relationship___1"]
+        relationship_id = next(
+            (
+                identifier
+                for identifier in range(1, 13)
+                if patient_data[f"guardian_relationship___{identifier}"]
+            ),
+            descriptors.GuardianRelationship.other.value,
+        )
+
         if relationship_id == descriptors.GuardianRelationship.other.value:
-            self.relationship = patient_data["other_relation"]
+            self.relationship = (
+                patient_data["other_relation"] or "no relationship provided"
+            )
         else:
             self.relationship = descriptors.GuardianRelationship(
                 relationship_id,
             ).name.replace("_", " ")
 
     @property
-    def full_name(self) -> str:
+    def title_name(self) -> str:
         """The full name of the guardian."""
-        return f"{self.first_name} {self.last_name}"
+        return f"{self.title} {self.last_name}"
+
+    @property
+    def title_full_name(self) -> str:
+        """The full name of the guardian."""
+        return f"{self.title} {self.first_name} {self.last_name}"
+
+    @property
+    def title(self) -> str:
+        """The title of the guardian.
+
+        We scan for more keywords than are available in the descriptor to attempt
+        to catch some of the "other" cases.
+
+        Returns:
+            str: The title of the guardian based on their inferred gender.
+        """
+        female_keywords = ["mother", "aunt", "carrier", "sister"]
+        male_keywords = ["father", "uncle", "brother"]
+
+        if any(keyword in self.relationship.lower() for keyword in male_keywords):
+            return "Mr."
+        if any(keyword in self.relationship.lower() for keyword in female_keywords):
+            return "Ms./Mrs."
+        return "Mr./Ms./Mrs."
+
+    @property
+    def parent_or_guardian(self) -> str:
+        """The parent or guardian."""
+        parent_keywords = ["mother", "father"]
+        if any(keyword in self.relationship.lower() for keyword in parent_keywords):
+            return "parent"
+        return "guardian"
 
 
 class Household:
@@ -177,17 +294,20 @@ class Household:
             patient_data: The patient dataframe.
         """
         n_members = patient_data["residing_number"]
-        self.members = [
-            HouseholdMember(patient_data, i) for i in range(1, n_members + 1)
-        ]
+        self.members = transformers.HouseholdMembers(
+            [HouseholdMember(patient_data, i) for i in range(1, n_members + 1)],
+        )
         self.guardian_marital_status = descriptors.GuardianMaritalStatus(
             patient_data["guardian_maritalstatus"],
-        ).name
+        ).name.replace("_", " ")
         self.city = patient_data["city"]
 
-        self.state = descriptors.USState(int(patient_data["state"])).name
+        self.state = descriptors.USState(int(patient_data["state"])).name.replace(
+            "_",
+            " ",
+        )
         self.languages = [
-            descriptors.Language(identifier).name
+            descriptors.Language(identifier).name.replace("_", " ")
             for identifier in range(1, 25)
             if patient_data[f"language___{identifier}"] == "1"
         ]
@@ -291,7 +411,10 @@ class Development:
         self.duration_of_pregnancy = transformers.DurationOfPregnancy(
             patient_data["txt_duration_preg_num"],
         )
-        self.delivery = transformers.BirthDelivery(patient_data["opt_delivery"])
+        self.delivery = transformers.BirthDelivery(
+            descriptors.BirthDelivery(patient_data["opt_delivery"]),
+            other=patient_data["csection_reason"],
+        )
         self.delivery_location = transformers.DeliveryLocation(
             descriptors.DeliveryLocation(patient_data["birth_location"]),
             patient_data["birth_other"],
@@ -368,72 +491,10 @@ class PsychiatricHistory:
         self.children_services = transformers.ChildrenServices(
             patient_data["acs_exp"],
         )
-        self.family_psychiatric_history = FamilyPyshicatricHistory(patient_data)
         self.violence_and_trauma = transformers.ViolenceAndTrauma(
             patient_data["violence_exp"],
         )
         self.self_harm = transformers.SelfHarm(patient_data["selfharm_exp"])
-
-
-class FamilyPyshicatricHistory:
-    """The parser for the patient's family's psychiatric history."""
-
-    def __init__(self, patient_data: dict[str, Any]) -> None:
-        """Initializes the psychiatric history.
-
-        Args:
-            patient_data: The patient dataframe.
-        """
-        self.is_father_history_known = bool(patient_data["biohx_dad_other"])
-        self.is_mother_history_known = bool(patient_data["biohx_mom_other"])
-        self.family_diagnoses = self.get_family_diagnoses(patient_data)
-
-    def get_family_diagnoses(
-        self,
-        patient_data: dict[str, Any],
-    ) -> transformers.FamilyDiagnoses:
-        """Gets the family diagnoses.
-
-        There's an edge-case where the complete family history is unknown.
-        REDCap defaults to True for diagnoses in this case, but this is
-        undesired.
-
-        Args:
-            patient_data: The patient dataframe.
-
-        Returns:
-            The family diagnoses transformers.
-        """
-        if not self.is_father_history_known and not self.is_mother_history_known:
-            history_known = "Family psychiatric history is unknown."
-            return transformers.FamilyDiagnoses(
-                [],
-                history_known,
-            )
-
-        if not self.is_father_history_known:
-            history_known = "Family history for the father is unknown."
-        elif not self.is_mother_history_known:
-            history_known = "Family history for the mother is unknown."
-
-        else:
-            history_known = ""
-
-        family_diagnoses = [
-            descriptors.FamilyPsychiatricHistory(
-                diagnosis=diagnosis.name,
-                no_formal_diagnosis=patient_data[
-                    f"{diagnosis.checkbox_abbreviation}___4"
-                ]
-                == "1",
-                family_members=patient_data[f"{diagnosis.text_abbreviation}_text"],
-            )
-            for diagnosis in descriptors.family_psychiatric_diagnoses
-        ]
-        return transformers.FamilyDiagnoses(
-            family_diagnoses,
-            history_known,
-        )
 
 
 class TherapeuticInterventions:

@@ -6,15 +6,17 @@ matches and transform method for each transformer. Each transformer should
 be callable from the transform method alone, with the matches method being
 used internally.
 """
+
 import abc
 import dataclasses
 import enum
-from typing import Generic, TypeVar
+from typing import Generic, Protocol, TypeVar
 
 import fastapi
 from fastapi import status
 
-from ctk_api.routers.file_conversion.intake import descriptors, utils
+from ctk_api.routers.file_conversion.intake import descriptors
+from ctk_api.routers.file_conversion.intake.utils import string_utils
 
 T = TypeVar("T")
 
@@ -24,6 +26,7 @@ class ReplacementTags(str, enum.Enum):
 
     PREFERRED_NAME = "{{PREFERRED_NAME}}"
     REPORTING_GUARDIAN = "{{REPORTING_GUARDIAN}}"
+    PRONOUN_2 = "{{PRONOUN_2}}"
 
 
 class Transformer(Generic[T], abc.ABC):
@@ -140,17 +143,6 @@ class BirthComplications(
 
         """
         super().__init__([descriptors.BirthComplications(val) for val in value], other)
-        if (
-            descriptors.BirthComplications.none_of_the_above in self.base
-            and len(self.base) > 1
-        ):
-            raise fastapi.HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "Birth complications 'none of the above' cannot be combined with "
-                    "other birth complications."
-                ),
-            )
 
     def transform(self) -> str:
         """Transforms the birth complications information to a string.
@@ -158,6 +150,12 @@ class BirthComplications(
         Returns:
             str: The transformed object.
         """
+        if (
+            descriptors.BirthComplications.none_of_the_above in self.base
+            and len(self.base) > 1
+        ):
+            return """MANUAL INTERVENTION REQUIRED: 'None of the above' should not
+            be selected with other birth complications."""
         if descriptors.BirthComplications.none_of_the_above in self.base:
             return "no birth complications"
 
@@ -174,8 +172,11 @@ class BirthComplications(
                 names.append(val.name.replace("_", " "))
         if len(names) == 1:
             return f"the following birth complication: {names[0]}"
-        return "the following birth complications: " + utils.join_with_oxford_comma(
-            names,
+        return (
+            "the following birth complications: "
+            + string_utils.join_with_oxford_comma(
+                names,
+            )
         )
 
 
@@ -185,6 +186,10 @@ class DurationOfPregnancy(Transformer[str]):
     def transform(self) -> str:
         """Transforms the time of pregnancy information to a string.
 
+        Though most guardians answer with just a number, the field is a freeform string.
+        This transformer attempts to wrangle the data into a consistent format of
+        "X weeks", but will return to the quoted original string if it can't.
+
         Returns:
             str: The transformed object.
         """
@@ -193,6 +198,11 @@ class DurationOfPregnancy(Transformer[str]):
         try:
             duration_of_pregnancy = float(self.base)
         except ValueError:
+            parts = self.base.split()
+            if len(parts) == 2 and parts[0].isnumeric() and parts[1].lower() == "weeks":  # noqa: PLR2004
+                # Common edge case: guardian writes "40 weeks".
+                # This doesn't need additional quotes.
+                return self.base.lower()
             return f'"{self.base}"'
         return f"{duration_of_pregnancy:g} weeks"
 
@@ -210,7 +220,9 @@ class BirthDelivery(Transformer[descriptors.BirthDelivery]):
             return "an unknown type of delivery"
         if self.base == descriptors.BirthDelivery.vaginal:
             return "a vaginal delivery"
-        return "a cesarean section"
+
+        other = self.other if self.other else "unspecified"
+        return f'a cesarean section due to "{other}"'
 
 
 class DeliveryLocation(Transformer[descriptors.DeliveryLocation]):
@@ -338,7 +350,7 @@ class PastSchools(MultiTransformer[PastSchoolInterface]):
         if len(self.base) == 0:
             return "no prior history of schools"
         substrings = [f"{val.name} (grades: {val.grades})" for val in self.base]
-        return "attended the following schools: " + utils.join_with_oxford_comma(
+        return "attended the following schools: " + string_utils.join_with_oxford_comma(
             substrings,
         )
 
@@ -379,13 +391,13 @@ class PastDiagnoses(MultiTransformer[descriptors.PastDiagnosis]):
             return "with no prior history of psychiatric diagnoses"
 
         if short:
-            return "with a prior history of " + utils.join_with_oxford_comma(
+            return "with a prior history of " + string_utils.join_with_oxford_comma(
                 [val.diagnosis for val in self.base],
             )
 
         return (
-            "who was diagnosed with the following psychiatric diagnoses: "
-            + utils.join_with_oxford_comma(
+            "was diagnosed with the following psychiatric diagnoses: "
+            + string_utils.join_with_oxford_comma(
                 [
                     f"{val.diagnosis} at {val.age} by {val.clinician}"
                     for val in self.base
@@ -408,57 +420,67 @@ class HouseholdRelationship(Transformer[descriptors.HouseholdRelationship]):
         return self.base.name.replace("_", " ")
 
 
-class FamilyDiagnoses(MultiTransformer[descriptors.FamilyPsychiatricHistory]):
-    """The transformer for family diagnoses."""
+class HouseholdMemberInterface(Protocol):
+    """Interface for household members.
+
+    Needed to prevent circular import from parsers.
+    """
+
+    name: str
+    age: str
+    relationship: str
+    relationship_quality: str
+    grade_occupation: str
+
+
+class HouseholdMembers(MultiTransformer[HouseholdMemberInterface]):
+    """The transformer for household members."""
 
     def transform(self) -> str:
-        """Transforms the family diagnoses information to a string.
+        """Transforms the household member information to a string.
 
         Returns:
             str: The transformed object.
         """
-        no_past_diagnosis = [val for val in self.base if val.no_formal_diagnosis]
-        past_diagnosis = [val for val in self.base if not val.no_formal_diagnosis]
+        if len(self.base) == 0:
+            return "no other household members"
 
-        text = self.other if self.other else ""
-        if len(past_diagnosis) > 0:
-            if text:
-                text += " "
-            text += "{{PREFERRED_NAME}}'s family history is significant for "
-            past_diagosis_texts = [
-                self._past_diagnosis_text(val) for val in past_diagnosis
-            ]
-            text += utils.join_with_oxford_comma(past_diagosis_texts)
-            text += "."
+        member_strings = [
+            self.household_member_to_string(member) for member in self.base
+        ]
 
-        if len(no_past_diagnosis) > 0:
-            if text:
-                text += " "
-            if len(no_past_diagnosis) > 1:
-                no_diagnosis_names = [val.diagnosis for val in no_past_diagnosis]
-                text += (
-                    "Family history of the following diagnoses was denied: "
-                    + utils.join_with_oxford_comma(no_diagnosis_names)
-                )
-            else:
-                text += f"Family history of {no_past_diagnosis[0].diagnosis} was denied"
-            text += "."
-        return text
+        return string_utils.join_with_oxford_comma(member_strings)
 
-    @staticmethod
-    def _past_diagnosis_text(diagnosis: descriptors.FamilyPsychiatricHistory) -> str:
-        """Transforms a family diagnosis to a string.
+    def household_member_to_string(self, member: HouseholdMemberInterface) -> str:
+        """Converts a household member to a string representation.
+
+        Clinical staff prefers to only use the name of the parents, and only include
+        occupation for those who are not students. We use age as a proxy for this.
 
         Args:
-            diagnosis: The family diagnosis.
+            member: The HouseholdMemberInterface object to convert.
 
         Returns:
-            str: The transformed object.
+            The string representation of the household member.
+
         """
-        family_members = utils.join_with_oxford_comma(diagnosis.family_members)
-        if family_members:
-            return f"{diagnosis.diagnosis} ({family_members})"
-        return diagnosis.diagnosis
+        string = f"{ReplacementTags.PRONOUN_2.value} {member.relationship}"
+        is_parent = any(
+            parent in member.relationship.lower() for parent in ["father", "mother"]
+        )
+        if is_parent:
+            string += f" {member.name}"
+        member_properties = [
+            str(member.age),
+            member.relationship_quality + " relationship",
+        ]
+
+        age = string_utils.StringToInt().parse(member.age)
+        if (isinstance(age, int) and age > 21) or isinstance(age, str):  # noqa: PLR2004
+            member_properties.append(member.grade_occupation.lower())
+
+        string += f" ({', '.join(member_properties)})"
+        return string
 
 
 class ViolenceAndTrauma(Transformer[str]):
@@ -472,10 +494,13 @@ class ViolenceAndTrauma(Transformer[str]):
         """
         if not self.base:
             return (
-                "{{REPORTING_GUARDIAN}} denied any history of violence or trauma for "
-                "{{PREFERRED_NAME}}."
+                f"{ReplacementTags.REPORTING_GUARDIAN.value} denied any history of "
+                f"violence or trauma for {ReplacementTags.PREFERRED_NAME.value}."
             )
-        return "{{REPORTING_GUARDIAN}} reported that " + f'"{self.base}".'
+        return (
+            f"{ReplacementTags.REPORTING_GUARDIAN.value} reported that "
+            f'"{self.base}".'
+        )
 
 
 class AggressiveBehavior(Transformer[str]):
@@ -489,11 +514,14 @@ class AggressiveBehavior(Transformer[str]):
         """
         if not self.base:
             return (
-                "{{REPORTING_GUARDIAN}} denied any history of homicidality or "
-                "severe physically aggressive behaviors towards others for "
-                "{{PREFERRED_NAME}}."
+                f"{ReplacementTags.REPORTING_GUARDIAN.value} denied any history of "
+                "homicidality or severe physically aggressive behaviors towards others "
+                f"for {ReplacementTags.PREFERRED_NAME.value}."
             )
-        return "{{REPORTING_GUARDIAN}} reported that " + f'"{self.base}".'
+        return (
+            f"{ReplacementTags.REPORTING_GUARDIAN.value} reported that "
+            f'"{self.base}".'
+        )
 
 
 class ChildrenServices(Transformer[str]):
@@ -507,10 +535,13 @@ class ChildrenServices(Transformer[str]):
         """
         if not self.base:
             return (
-                "{{REPORTING_GUARDIAN}} denied any history of ACS involvement for "
-                "{{PREFERRED_NAME}}."
+                f"{ReplacementTags.REPORTING_GUARDIAN.value} denied any history of ACS "
+                f"involvement for {ReplacementTags.PREFERRED_NAME.value}."
             )
-        return "{{REPORTING_GUARDIAN}} reported that " + f'"{self.base}".'
+        return (
+            f"{ReplacementTags.REPORTING_GUARDIAN.value} reported that "
+            f'"{self.base}".'
+        )
 
 
 class SelfHarm(Transformer[str]):
@@ -524,7 +555,10 @@ class SelfHarm(Transformer[str]):
         """
         if not self.base:
             return (
-                "{{REPORTING_GUARDIAN}} denied any history of serious self-injurious"
-                " harm or suicidal ideation for {{PREFERRED_NAME}}"
+                f"{ReplacementTags.REPORTING_GUARDIAN.value} denied any history of "
+                "serious self-injurious harm or suicidal ideation for "
+                f"{ReplacementTags.PREFERRED_NAME.value}."
             )
-        return "{{REPORTING_GUARDIAN}} reported that " + f'"{self.base}".'
+        return (
+            f'{ReplacementTags.REPORTING_GUARDIAN.value} reported that "{self.base}".'
+        )

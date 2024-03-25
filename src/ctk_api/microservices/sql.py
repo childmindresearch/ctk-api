@@ -1,4 +1,5 @@
 """A module for interacting with the SQL database."""
+
 import json
 import logging
 from collections import abc

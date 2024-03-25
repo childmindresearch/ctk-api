@@ -1,4 +1,5 @@
 """View definitions for the file conversion router."""
+
 import logging
 import tempfile
 
@@ -7,7 +8,6 @@ from fastapi import responses, status
 
 from ctk_api.core import config, core_utils
 from ctk_api.routers.file_conversion.intake import parser, writer
-from ctk_api.routers.file_conversion.intake import utils as intake_utils
 
 settings = config.get_settings()
 LOGGER_NAME = settings.LOGGER_NAME
@@ -37,7 +37,7 @@ def markdown_to_docx(
 
 def intake_to_docx(
     csv_file: fastapi.UploadFile,
-    redcap_survery_identifier: int,
+    redcap_survery_identifier: str,
     background_tasks: fastapi.BackgroundTasks,
 ) -> responses.FileResponse:
     """Converts an intake CSV file to a docx file.
@@ -50,7 +50,7 @@ def intake_to_docx(
     Returns:
         The response with the docx file.
     """
-    subject_df = intake_utils.read_subject_row(csv_file, redcap_survery_identifier)
+    subject_df = parser.read_subject_row(csv_file, redcap_survery_identifier)
     intake_info = parser.IntakeInformation(subject_df.row(0, named=True))
     report_writer = writer.ReportWriter(intake_info)
     report_writer.transform()

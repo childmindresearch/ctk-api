@@ -1,4 +1,5 @@
 """View definitions for the file conversion router."""
+
 import logging
 
 import fastapi
@@ -39,7 +40,7 @@ async def markdown_to_docx(
 @router.post("/intake2docx")
 async def intake_to_docx(
     csv_file: fastapi.UploadFile,
-    redcap_survey_identifier: int = fastapi.Form(
+    redcap_survey_identifier: str = fastapi.Form(
         ...,
         description="The REDCap survey identifier for the intake form.",
     ),

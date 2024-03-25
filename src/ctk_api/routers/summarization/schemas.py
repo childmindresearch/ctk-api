@@ -1,4 +1,5 @@
 """Schemas for the summarization router."""
+
 import pydantic
 
 

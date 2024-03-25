@@ -1,4 +1,5 @@
 """The controller for the summarization router."""
+
 import functools
 import logging
 from typing import Literal

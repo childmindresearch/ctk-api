@@ -1,4 +1,5 @@
 """Controller for the diagnoses endpoint."""
+
 import logging
 
 import fastapi

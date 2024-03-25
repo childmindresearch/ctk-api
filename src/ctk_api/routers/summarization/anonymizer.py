@@ -1,4 +1,5 @@
 """This module contains the anonymization logic for clinical reports."""
+
 import dataclasses
 import logging
 import re
