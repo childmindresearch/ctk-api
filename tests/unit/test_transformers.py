@@ -1,4 +1,5 @@
 """Tests for the textual output of intake transformers."""
+
 import pytest
 
 from ctk_api.routers.file_conversion.intake import descriptors, transformers
@@ -67,28 +68,37 @@ def test_birth_complications_transformer(
 
 
 @pytest.mark.parametrize(
-    ("value", "expected"),
+    ("value", "expected", "other"),
     [
         (
             descriptors.BirthDelivery.unknown,
             "an unknown type of delivery",
+            None,
         ),
         (
             descriptors.BirthDelivery.vaginal,
             "a vaginal delivery",
+            None,
         ),
         (
             descriptors.BirthDelivery.cesarean,
-            "a cesarean section",
+            'a cesarean section due to "unspecified"',
+            None,
+        ),
+        (
+            descriptors.BirthDelivery.cesarean,
+            'a cesarean section due to "test reason"',
+            "test reason",
         ),
     ],
 )
 def test_birth_delivery_transformer(
     value: descriptors.BirthDelivery,
     expected: str,
+    other: str | None,
 ) -> None:
     """Test that the BirthDelivery transformer returns the expected strings."""
-    transformer = transformers.BirthDelivery(value)
+    transformer = transformers.BirthDelivery(value, other)
 
     assert str(transformer) == expected
 
@@ -434,7 +444,7 @@ def test_children_services_transformer(base: str, expected: str) -> None:
             "",
             (
                 "{{REPORTING_GUARDIAN}} denied any history of serious self-injurious"
-                " harm or suicidal ideation for {{PREFERRED_NAME}}"
+                " harm or suicidal ideation for {{PREFERRED_NAME}}."
             ),
         ),
         (

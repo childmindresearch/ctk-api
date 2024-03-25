@@ -557,6 +557,8 @@ class SelfHarm(Transformer[str]):
             return (
                 f"{ReplacementTags.REPORTING_GUARDIAN.value} denied any history of "
                 "serious self-injurious harm or suicidal ideation for "
-                f"{ReplacementTags.PREFERRED_NAME.value}"
+                f"{ReplacementTags.PREFERRED_NAME.value}."
             )
-        return f'{ReplacementTags.REPORTING_GUARDIAN.value} reported that "{self.base}"'
+        return (
+            f'{ReplacementTags.REPORTING_GUARDIAN.value} reported that "{self.base}".'
+        )
