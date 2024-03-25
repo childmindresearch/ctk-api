@@ -1,4 +1,5 @@
 """Fixtures and configurations for testing the endpoints of the CTK API."""
+
 import enum
 
 import pytest

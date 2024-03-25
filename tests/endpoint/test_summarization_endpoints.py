@@ -1,4 +1,5 @@
 """Endpoint tests for the summarization router."""
+
 import dataclasses
 import tempfile
 

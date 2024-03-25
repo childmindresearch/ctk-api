@@ -1,4 +1,5 @@
 """Tests the diagnoses endpoints."""
+
 import pytest
 from fastapi import status, testclient
 from sqlalchemy import orm
