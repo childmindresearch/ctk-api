@@ -1,4 +1,5 @@
 """Tests for the anonymizer module."""
+
 # pylint: disable=protected-access
 import tempfile
 

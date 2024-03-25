@@ -1,4 +1,5 @@
 """Unit tests for the writer module."""
+
 import dataclasses
 from typing import Literal
 

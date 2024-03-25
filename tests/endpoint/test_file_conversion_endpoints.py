@@ -1,4 +1,5 @@
 """Tests the diagnoses endpoints."""
+
 import pathlib
 
 import docx

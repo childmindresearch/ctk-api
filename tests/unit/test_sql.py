@@ -1,4 +1,5 @@
 """Tests for the SQL module."""
+
 from unittest import mock
 
 import pytest
