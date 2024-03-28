@@ -44,25 +44,22 @@ class DocumentCorrections:
         document: docx.Document,
         *,
         correct_they: bool = True,
-        correct_capitalization: bool = True,
     ) -> None:
         """Initializes the corrector with a document.
 
         Args:
             document: The docx document to correct.
             correct_they: Whether to correct verb conjugations associated with 'they'.
-            correct_capitalization: Whether to correct the capitalization of the
-                first word.
+
         """
         self.document = document
         self.replacer = docx_utils.DocxReplace(document)
         self.conjugator = mlconjug3.Conjugator(language="en")
         self.correct_they = correct_they
-        self.correct_capitalization = correct_capitalization
 
     def correct(self) -> None:
         """Corrects verb conjugations associated with 'they' in the document."""
-        if not self.correct_they and not self.correct_capitalization:
+        if not self.correct_they:
             return
 
         for paragraph in self.document.paragraphs:
@@ -84,21 +81,14 @@ class DocumentCorrections:
         Args:
             sentence: The sentence to correct.
         """
-        words = sentence.split(" ")
-        if "they" not in [word.lower() for word in words]:
-            return
-
-        subject_verb_pairs = self._find_subject_verb(sentence)
-        they_verb_pairs = [
-            pair for pair in subject_verb_pairs if pair.subject.lower() == "they"
-        ]
-
-        for pair in reversed(they_verb_pairs):
-            sentence = self._correct_they_verb_conjugation(sentence, pair)
-
-        if sentence[0].islower():
-            new_sentence = sentence[0].upper() + sentence[1:]
-            self.replacer.replace(sentence, new_sentence)
+        words = sentence.split()
+        if "they" in [word.lower() for word in words]:
+            subject_verb_pairs = self._find_subject_verb(sentence)
+            they_verb_pairs = [
+                pair for pair in subject_verb_pairs if pair.subject.lower() == "they"
+            ]
+            for pair in reversed(they_verb_pairs):
+                sentence = self._correct_they_verb_conjugation(sentence, pair)
 
     def _correct_they_verb_conjugation(
         self,

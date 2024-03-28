@@ -98,6 +98,7 @@ class ReportWriter:
             short=True,
         )
         classroom = patient.education.classroom_type
+        age_determinant = "an" if patient.age in (8, 18) else "a"
 
         if patient.education.grade.isnumeric():
             grade_superscript = string_utils.ordinal_suffix(
@@ -108,7 +109,7 @@ class ReportWriter:
 
         texts = [
             f"""
-            At the time of enrollment, {patient.first_name} was a
+            At the time of enrollment, {patient.first_name} was {age_determinant}
             {patient.age}-year-old, {handedness} {patient.age_gender_label}
             {past_diagnoses}. {patient.first_name} was placed in a {classroom}
             {patient.education.grade}""",
@@ -545,10 +546,10 @@ class ReportWriter:
 
         text = f"""
             {patient.first_name}'s medical history is unremarkable for
-            significant medical conditions. {patient.pronouns[0]} is not
+            significant medical conditions. {patient.pronouns[0].capitalize()} is not
             currently taking any medications for chronic medical conditions.
             {patient.first_name} wears prescription glasses in home and
-            school settings. {patient.pronouns[0]} does/does not require a
+            school settings. {patient.pronouns[0].capitalize()} does/does not require a
             hearing device. {patient.guardian.title_name} denied any history of
             seizures, head trauma, migraines, meningitis or encephalitis.
         """
@@ -593,9 +594,10 @@ class ReportWriter:
         patient = self.intake.patient
         text = f"""
         {patient.first_name} is currently prescribed a daily/twice daily
-        oral course of {PLACEHOLDER} for {PLACEHOLDER}. {patient.pronouns[0]} is
-        being treated by Doctortype, DoctorName, monthly/weekly/biweekly. The
-        medication has been ineffective/effective.
+        oral course of {PLACEHOLDER} for {PLACEHOLDER}.
+        {patient.pronouns[0].capitalize()} is being treated by Doctortype,
+        DoctorName, monthly/weekly/biweekly. The medication has been
+        ineffective/effective.
         """
         text = string_utils.remove_excess_whitespace(text)
 
@@ -650,7 +652,6 @@ class ReportWriter:
         document_corrector = language_utils.DocumentCorrections(
             self.report,
             correct_they=self.intake.patient.pronouns[0] == "they",
-            correct_capitalization=True,
         )
         document_corrector.correct()
 
