@@ -184,7 +184,7 @@ class ReportWriter:
 
         heading = self._insert("Developmental Milestones", Style.HEADING_2)
         paragraph = self._insert(text)
-        docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_INTAKE)
+        docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_TEMPLATE)
 
     def write_early_education(self) -> None:
         """Writes the early education information to the report."""
@@ -227,7 +227,7 @@ class ReportWriter:
 
         heading = self._insert("Previous Testing", Style.HEADING_2)
         paragraph = self._insert(text)
-        docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_TEMPLATE)
+        docx_utils.format_paragraphs((heading, paragraph), font_rgb=RGB_INTAKE)
 
     def write_academic_history_table(self) -> None:
         """Writes the academic history table to the report."""
@@ -289,7 +289,7 @@ class ReportWriter:
             """
         else:
             iep_prior_text = f"""{patient.first_name} has never had an
-                              Individiualized Education Program (IEP)."""
+                              Individualized Education Program (IEP)."""
         if education.grade.isnumeric():
             grade_superscript = string_utils.ordinal_suffix(education.grade)
         else:
@@ -297,7 +297,7 @@ class ReportWriter:
         past_schools = education.past_schools
 
         text_prior = f"""
-            {patient.first_name} {past_schools}. {patient.pronouns[0]}
+            {patient.first_name} {past_schools}. {patient.pronouns[0].capitalize()}
             previously struggled with (provide details of academic challenges
             and behavioral difficulties in school). {iep_prior_text}
         """
@@ -328,7 +328,7 @@ class ReportWriter:
         current_paragraph = self._insert(texts_current[0])
         current_paragraph.add_run(texts_current[1]).font.superscript = True
         current_paragraph.add_run(" " + texts_current[2])
-        docx_utils.format_paragraphs(current_paragraph, font_rgb=RGB_TEMPLATE)
+        docx_utils.format_paragraphs(current_paragraph, font_rgb=RGB_INTAKE)
 
     def write_social_history(self) -> None:
         """Writes the social history to the end of the report."""
@@ -370,8 +370,10 @@ class ReportWriter:
         home_paragraph = self._insert(text_home)
         adaptive_paragraph = self._insert(text_adaptive)
 
-        docx_utils.format_paragraphs((heading, home_paragraph), font_rgb=RGB_INTAKE)
-        docx_utils.format_paragraphs(adaptive_paragraph, font_rgb=RGB_TEMPLATE)
+        docx_utils.format_paragraphs(
+            (heading, home_paragraph, adaptive_paragraph),
+            font_rgb=RGB_INTAKE,
+        )
 
     def write_social_functioning(self) -> None:
         """Writes the social functioning to the report."""

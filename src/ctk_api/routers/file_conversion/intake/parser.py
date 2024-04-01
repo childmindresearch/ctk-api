@@ -379,7 +379,7 @@ class Education:
         self.grade = patient_data["grade"]
         self.individualized_educational_program = (
             transformers.IndividualizedEducationProgram(
-                patient_data["iep"],
+                descriptors.IndividualizedEducationProgram(patient_data["iep"]),
             )
         )
         self.school_type = descriptors.SchoolType(patient_data["schooltype"])
