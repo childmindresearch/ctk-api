@@ -1,3 +1,5 @@
+Archived as its functionality has been split across https://github.com/childmindresearch/ctk-webapp and https://github.com/childmindresearch/ctk-functions.
+
 # Clinician Toolkit API
 [![Build](https://github.com/childmindresearch/ctk-api/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/childmindresearch/ctk-api/actions/workflows/test.yaml?query=branch%3Amain)
 ![stability-wip](https://img.shields.io/badge/stability-work_in_progress-lightgrey.svg)
